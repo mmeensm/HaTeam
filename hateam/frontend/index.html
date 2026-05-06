@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HaTeam - Match Your Perfect Teammates</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="auth-container" id="auth-section">
+        <h1>Ha<span>Team</span></h1>
+        <p class="subtitle">ระบบจับคู่เพื่อนทำโปรเจกต์ที่ดีที่สุด</p>
+
+        <form id="auth-form">
+            <div class="input-group" id="name-field" style="display: none;">
+                <label for="name">ชื่อเรียกของคุณ (Display Name)</label>
+                <input type="text" id="name" placeholder="ใส่ชื่อให้เพื่อนเรียกง่ายๆ">
+            </div>
+
+            <div class="input-group">
+                <label for="email">อีเมลมหาวิทยาลัย</label>
+                <input type="email" id="email" placeholder="example@swu.ac.th" required>
+            </div>
+
+            <div class="input-group">
+                <label for="password">รหัสผ่าน</label>
+                <input type="password" id="password" placeholder="••••••••" required>
+            </div>
+
+            <button type="submit" class="btn-main" id="submit-btn">เข้าสู่ระบบ</button>
+        </form>
+
+        <p class="toggle-text" id="toggle-mode">
+            ยังไม่มีบัญชีใช่ไหม? <span>สมัครสมาชิกที่นี่</span>
+        </p>
+    </div>
+    
+    <div class="dashboard-container" id="dashboard-section" style="display: none;">
+        
+        <nav class="navbar">
+            <h2>Ha<span>Team</span></h2>
+            <button id="logout-btn" class="btn-outline">ออกจากระบบ</button>
+        </nav>
+
+        <div class="dashboard-content">
+            <div class="header-action">
+                <h3>กระดานหาเพื่อนทำโปรเจกต์</h3>
+                <button id="show-create-btn" class="btn-main" style="width: auto; padding: 10px 20px;">+ สร้างโปรเจกต์ใหม่</button>
+            </div>
+
+            <div class="project-grid" id="project-list">
+                </div>
+        </div>
+        
+    </div>
+    <script src="script.js"></script>
+
+</body>
+</html>

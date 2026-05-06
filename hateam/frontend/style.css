@@ -1,0 +1,170 @@
+/* ตั้งค่าพื้นฐาน */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f4f7f6;
+    margin: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+/* กล่องการ์ดตรงกลาง */
+.auth-container {
+    background: white;
+    padding: 40px;
+    border-radius: 16px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+    width: 100%;
+    max-width: 400px;
+    border-top: 8px solid #9b59b6; /* ขอบบนสีม่วง */
+    text-align: center;
+}
+
+/* หัวข้อแอป */
+h1 {
+    color: #2c3e50;
+    margin-bottom: 5px;
+    font-size: 28px;
+}
+h1 span { color: #2ecc71; } /* คำว่า Team สีเขียว */
+
+p.subtitle {
+    color: #7f8c8d;
+    font-size: 14px;
+    margin-bottom: 30px;
+}
+
+/* จัดการช่องกรอกข้อมูล */
+.input-group {
+    text-align: left;
+    margin-bottom: 20px;
+}
+.input-group label {
+    display: block;
+    font-weight: bold;
+    color: #34495e;
+    margin-bottom: 8px;
+    font-size: 14px;
+}
+.input-group input {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid #ecf0f1;
+    border-radius: 8px;
+    box-sizing: border-box;
+    font-size: 14px;
+    transition: 0.3s;
+}
+.input-group input:focus {
+    border-color: #2ecc71;
+    outline: none;
+}
+
+/* ปุ่มกด */
+.btn-main {
+    width: 100%;
+    padding: 14px;
+    background-color: #2ecc71; /* สีเขียว */
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s;
+    margin-top: 10px;
+}
+.btn-main:hover {
+    background-color: #27ae60;
+    box-shadow: 0 4px 10px rgba(46, 204, 113, 0.3);
+}
+
+/* ข้อความสลับหน้า */
+.toggle-text {
+    margin-top: 20px;
+    font-size: 14px;
+    color: #7f8c8d;
+}
+.toggle-text span {
+    color: #9b59b6;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.3s;
+}
+.toggle-text span:hover {
+    color: #f1c40f; /* โฮเวอร์แล้วเป็นสีเหลือง */
+}
+
+/* =========================================
+   สไตล์สำหรับหน้า Dashboard 
+   ========================================= */
+
+/* เปลี่ยนให้ Dashboard เต็มจอ */
+.dashboard-container {
+    width: 100%;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* แถบเมนูด้านบน */
+.navbar {
+    width: 100%;
+    background: white;
+    padding: 15px 40px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-sizing: border-box;
+}
+.navbar h2 { margin: 0; font-size: 24px; }
+.btn-outline {
+    background: white;
+    border: 2px solid #e74c3c;
+    color: #e74c3c;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.3s;
+}
+.btn-outline:hover { background: #e74c3c; color: white; }
+
+/* พื้นที่ตรงกลาง */
+.dashboard-content {
+    width: 100%;
+    max-width: 1000px;
+    padding: 30px;
+    box-sizing: border-box;
+}
+.header-action {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+}
+.header-action h3 { color: #2c3e50; margin: 0; font-size: 22px; }
+
+/* การจัดเรียงกล่องโปรเจกต์แบบ Grid */
+.project-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+/* การ์ดโปรเจกต์แต่ละอัน */
+.project-card {
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    border-left: 6px solid #f1c40f; /* ขอบซ้ายสีเหลือง */
+    transition: transform 0.2s;
+}
+.project-card:hover { transform: translateY(-5px); }
+.project-card h4 { margin: 0 0 10px 0; color: #34495e; font-size: 18px; }
+.project-card p { color: #7f8c8d; font-size: 14px; margin-bottom: 15px; line-height: 1.5; }
+.project-card .owner { font-size: 12px; color: #9b59b6; font-weight: bold; }

@@ -1,0 +1,133 @@
+// ดึงส่วนต่างๆ ของหน้าจอมาเก็บไว้ในตัวแปร
+const authForm = document.getElementById('auth-form');
+const toggleModeText = document.getElementById('toggle-mode');
+const nameField = document.getElementById('name-field');
+const submitBtn = document.getElementById('submit-btn');
+const nameInput = document.getElementById('name');
+const emailInput = document.getElementById('email');
+const passwordInput = document.getElementById('password');
+
+let isLogin = true; // ตั้งสถานะเริ่มต้นให้เป็นหน้า "เข้าสู่ระบบ"
+
+// 1. ระบบสลับหน้า Login / Register
+toggleModeText.addEventListener('click', () => {
+    isLogin = !isLogin; // สลับสถานะ
+
+    if (isLogin) {
+        // ถ้าเป็นโหมด Login: ซ่อนช่องกรอกชื่อ
+        nameField.style.display = 'none';
+        nameInput.removeAttribute('required');
+        submitBtn.innerText = 'เข้าสู่ระบบ';
+        toggleModeText.innerHTML = 'ยังไม่มีบัญชีใช่ไหม? <span>สมัครสมาชิกที่นี่</span>';
+    } else {
+        // ถ้าเป็นโหมด Register: แสดงช่องกรอกชื่อ
+        nameField.style.display = 'block';
+        nameInput.setAttribute('required', 'true');
+        submitBtn.innerText = 'สมัครสมาชิก';
+        toggleModeText.innerHTML = 'มีบัญชีอยู่แล้ว? <span>เข้าสู่ระบบที่นี่</span>';
+    }
+});
+
+// 2. ระบบส่งข้อมูลไปหา Backend เมื่อกดปุ่มฟอร์ม
+authForm.addEventListener('submit', async (e) => {
+    e.preventDefault(); // ป้องกันไม่ให้หน้าเว็บรีเฟรชตัวเองตอนกดปุ่ม
+
+    // ดึงค่าที่ผู้ใช้พิมพ์มา
+    const email = emailInput.value;
+    const password = passwordInput.value;
+    const name = nameInput.value;
+
+    // เลือก URL ว่าจะส่งไป API สมัครสมาชิก หรือ API เข้าสู่ระบบ
+    // (อ้างอิงตามโครงสร้าง MVC ที่เราแยกโฟลเดอร์ไว้)
+    const endpoint = isLogin ? '/api/auth/login' : '/api/auth/register';
+    const url = `http://localhost:5000${endpoint}`;
+
+    // จัดเตรียมแพ็กเกจข้อมูล
+    const payload = isLogin ? { email, password } : { name, email, password };
+
+    try {
+        // ใช้คำสั่ง fetch เพื่อยิงข้อมูลไปหาเซิร์ฟเวอร์
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            // ถ้าสำเร็จ!
+            if (isLogin) {
+                alert('เข้าสู่ระบบสำเร็จ! (เดี๋ยวเราจะพาไปหน้า Dashboard กัน)');
+                // เก็บ Token ไว้ในกล่องเก็บของของเบราว์เซอร์ เพื่อใช้ยืนยันตัวตนทีหลัง
+                localStorage.setItem('token', data.token);
+                document.getElementById('auth-section').style.display = 'none'; // ซ่อนหน้า Login
+                document.getElementById('dashboard-section').style.display = 'flex'; // โชว์หน้า Dashboard
+                fetchProjects();
+            } else {
+                alert('สมัครสมาชิกสำเร็จ! ลองเข้าสู่ระบบด้วยรหัสที่เพิ่งสมัครดูนะ');
+                toggleModeText.click(); // สลับกลับมาหน้า Login ให้อัตโนมัติ
+                passwordInput.value = ''; // เคลียร์ช่องรหัสผ่าน
+            }
+        } else {
+            // ถ้าพ่น Error กลับมา (เช่น รหัสผิด, อีเมลซ้ำ)
+            alert(`แจ้งเตือน: ${data.error}`);
+        }
+    } catch (error) {
+        alert('เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ครับ เช็กหน่อยว่าเปิด Backend (npm run dev) ไว้หรือยัง?');
+    }
+});
+
+// ==========================================
+// 3. ระบบออกจากระบบ (Logout)
+// ==========================================
+const logoutBtn = document.getElementById('logout-btn');
+
+logoutBtn.addEventListener('click', () => {
+    // ลบ Token กุญแจยืนยันตัวตนออกจากเบราว์เซอร์
+    localStorage.removeItem('token');
+    
+    // ซ่อนหน้า Dashboard และโชว์หน้า Login กลับมา
+    document.getElementById('dashboard-section').style.display = 'none';
+    document.getElementById('auth-section').style.display = 'block';
+    
+    // เคลียร์ช่องรหัสผ่านเพื่อความปลอดภัย
+    passwordInput.value = '';
+});
+
+// ==========================================
+// 4. ระบบดึงข้อมูลโปรเจกต์มาแสดงที่หน้า Dashboard
+// ==========================================
+async function fetchProjects() {
+    const projectList = document.getElementById('project-list');
+    projectList.innerHTML = '<p>กำลังโหลดข้อมูล...</p>'; // โชว์ข้อความตอนกำลังโหลด
+
+    try {
+        // ยิงไปหา API ดูโปรเจกต์ทั้งหมดที่เราทำไว้ใน Backend
+        const response = await fetch('http://localhost:5000/api/projects');
+        const projects = await response.json();
+
+        // เคลียร์ข้อความกำลังโหลดทิ้ง
+        projectList.innerHTML = '';
+
+        // ถ้ายังไม่มีโปรเจกต์เลย
+        if (projects.length === 0) {
+            projectList.innerHTML = '<p>ยังไม่มีโปรเจกต์ในระบบเลย มากดสร้างคนแรกกันเถอะ!</p>';
+            return;
+        }
+
+        // วนลูปข้อมูลที่ได้มา แล้วสร้างเป็นกล่องการ์ดทีละอัน
+        projects.forEach(project => {
+            const card = document.createElement('div');
+            card.className = 'project-card';
+            card.innerHTML = `
+                <h4>${project.title}</h4>
+                <p>${project.description}</p>
+                <span class="owner">👑 สร้างโดย: ${project.owner}</span>
+            `;
+            projectList.appendChild(card);
+        });
+    } catch (error) {
+        projectList.innerHTML = '<p style="color: red;">โหลดข้อมูลไม่สำเร็จ กรุณาลองรีเฟรชหน้าเว็บ</p>';
+    }
+}
