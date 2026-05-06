@@ -133,16 +133,21 @@ async function fetchProjects() {
             // สร้างตัวแปรไว้เก็บปุ่มที่จะโชว์
             let actionButtons = '';
 
+            // เช็กเงื่อนไข 3 แบบ: เป็นเจ้าของ / เป็นสมาชิกแล้ว / เป็นคนนอก
             if (project.owner === currentUserName) {
-                // ถ้าเราเป็นเจ้าของ -> โชว์ปุ่ม ลบ และ แก้ไข
+                // 1. ถ้าเราเป็นเจ้าของ -> โชว์ปุ่ม ลบ, แก้ไข, ดูผู้สมัคร
                 actionButtons = `
                     <button onclick="deleteProject('${project.id}')" class="btn-delete">🗑️ ลบ</button>
                     <button onclick="openEditModal('${project.id}', '${project.title}', '${project.description}')" class="btn-edit">✏️ แก้ไข</button>
-                    
                     <button onclick="viewApplicants('${project.id}')" class="btn-edit" style="background-color: #9b59b6;">👀 ดูผู้สมัคร</button>
                 `;
+            } else if (project.members && project.members.includes(currentUserName)) {
+                // 2. ถ้าเราเป็นสมาชิกในทีมแล้ว (ชื่อเราอยู่ในอาเรย์ members) -> โชว์ปุ่ม ออกจากทีม
+                actionButtons = `
+                    <button onclick="leaveProject('${project.id}')" class="btn-delete" style="background-color: #e67e22;">👋 ออกจากทีม</button>
+                `;
             } else {
-                // ถ้าคนอื่นเป็นเจ้าของ -> โชว์ปุ่ม ขอเข้าร่วมทีม
+                // 3. ถ้าเป็นคนนอก -> โชว์ปุ่ม ขอเข้าร่วมทีม
                 actionButtons = `
                     <button onclick="joinProject('${project.id}')" class="btn-join">🤝 ขอเข้าร่วมทีม</button>
                 `;
@@ -452,6 +457,33 @@ async function rejectApplicant(projectId, applicantId) {
         } else {
             const data = await response.json();
             alert(`ไม่สามารถทำรายการได้: ${data.error}`);
+        }
+    } catch (error) {
+        alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
+    }
+}
+
+// ==========================================
+// 11. ฟังก์ชันออกจากทีม (Leave Project)
+// ==========================================
+async function leaveProject(projectId) {
+    if (!confirm('แน่ใจนะว่าต้องการออกจากทีมนี้? 😢')) return;
+
+    const token = localStorage.getItem('token');
+    try {
+        const response = await fetch(`http://localhost:5000/api/projects/${projectId}/leave`, {
+            method: 'POST', // หรือ DELETE ก็ได้ แต่เราจะใช้ POST ตามที่เคยตั้งไว้ครับ
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        if (response.ok) {
+            alert('คุณได้ออกจากทีมเรียบร้อยแล้ว 👋');
+            fetchProjects(); // รีเฟรชหน้ากระดาน
+        } else {
+            const data = await response.json();
+            alert(`เกิดข้อผิดพลาด: ${data.error}`);
         }
     } catch (error) {
         alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');

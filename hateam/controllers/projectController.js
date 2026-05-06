@@ -176,3 +176,27 @@ exports.rejectApplicant = async (req, res) => {
         await session.close();
     }
 };
+
+// ==========================================
+// 9. ออกจากทีม (Leave Project)
+// ==========================================
+exports.leaveProject = async (req, res) => {
+    const projectId = req.params.id;
+    const userId = req.user.userId; // ไอดีของคนที่ล็อกอินและกดปุ่มออก
+    const session = driver.session();
+
+    try {
+        // หาเส้น MEMBER_OF ที่เชื่อมระหว่างคนกดกับโปรเจกต์ แล้วตัดมันทิ้งซะ!
+        const query = `
+            MATCH (u:User {userId: $userId})-[r:MEMBER_OF]->(p:Project {projectId: $projectId})
+            DELETE r
+        `;
+        await session.run(query, { userId, projectId });
+        res.status(200).json({ message: 'ออกจากทีมเรียบร้อย' });
+    } catch (error) {
+        console.error('Leave Team Error:', error);
+        res.status(500).json({ error: 'เกิดข้อผิดพลาดในการออกจากทีม' });
+    } finally {
+        await session.close();
+    }
+};

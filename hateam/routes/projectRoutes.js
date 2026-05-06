@@ -11,6 +11,7 @@ router.post('/:id/join', verifyToken, projectController.joinProject);
 router.get('/:id/applicants', verifyToken, projectController.getApplicants);
 router.post('/:id/accept', verifyToken, projectController.acceptApplicant);
 router.post('/:id/reject', verifyToken, projectController.rejectApplicant);
+router.post('/:id/leave', verifyToken, projectController.leaveProject);
 
 module.exports = router;
 
