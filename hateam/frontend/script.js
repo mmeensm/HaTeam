@@ -138,6 +138,8 @@ async function fetchProjects() {
                 actionButtons = `
                     <button onclick="deleteProject('${project.id}')" class="btn-delete">🗑️ ลบ</button>
                     <button onclick="openEditModal('${project.id}', '${project.title}', '${project.description}')" class="btn-edit">✏️ แก้ไข</button>
+                    
+                    <button onclick="viewApplicants('${project.id}')" class="btn-edit" style="background-color: #9b59b6;">👀 ดูผู้สมัคร</button>
                 `;
             } else {
                 // ถ้าคนอื่นเป็นเจ้าของ -> โชว์ปุ่ม ขอเข้าร่วมทีม
@@ -146,9 +148,18 @@ async function fetchProjects() {
                 `;
             }
 
+            // ในไฟล์ script.js ช่วงท้ายของ projects.forEach...
             card.innerHTML = `
                 <h4>${project.title}</h4>
                 <p>${project.description}</p>
+                
+                <div style="margin: 10px 0; font-size: 0.9em; color: #555;">
+                    <strong>👥 สมาชิกในทีม:</strong> 
+                    ${project.members && project.members.length > 0 && project.members[0] !== null
+                        ? project.members.join(', ') 
+                        : '<span style="color: #999;">ยังไม่มีสมาชิก</span>'}
+                </div>
+
                 <div style="margin-top: 15px; overflow: hidden;">
                     <span class="owner">👑 สร้างโดย: ${project.owner}</span>
                     ${actionButtons}
@@ -330,3 +341,119 @@ async function joinProject(projectId) {
     }
 }
 
+// ==========================================
+// 9. ระบบจัดการผู้สมัคร (Manage Applicants)
+// ==========================================
+const applicantsModal = document.getElementById('applicants-modal');
+
+// ฟังก์ชันปิดป๊อปอัป
+function closeApplicantsModal() {
+    applicantsModal.style.display = 'none';
+}
+
+// ฟังก์ชันเปิดป๊อปอัปและดึงข้อมูลจาก Backend
+async function viewApplicants(projectId) {
+    applicantsModal.style.display = 'flex';
+    const listContainer = document.getElementById('applicants-list');
+    listContainer.innerHTML = '<p style="text-align: center;">กำลังโหลดข้อมูล...</p>';
+
+    const token = localStorage.getItem('token');
+
+    try {
+        // ยิงไปขอข้อมูลรายชื่อผู้สมัครจาก Backend
+        const response = await fetch(`http://localhost:5000/api/projects/${projectId}/applicants`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (response.ok) {
+            const applicants = await response.json();
+
+            // ถ้ายังไม่มีใครสมัครเลย
+            if (applicants.length === 0) {
+                listContainer.innerHTML = '<p style="text-align: center; color: #7f8c8d;">ยังไม่มีผู้สมัครในขณะนี้ 😢</p>';
+                return;
+            }
+
+            // ถ้ามีคนสมัคร ให้ล้างคำว่า "กำลังโหลด..." ทิ้ง แล้วสร้างรายชื่อคนใส่ลงไป
+            listContainer.innerHTML = '';
+            applicants.forEach(applicant => {
+                const item = document.createElement('div');
+                item.className = 'applicant-item';
+                item.innerHTML = `
+                    <span class="applicant-name">👤 ${applicant.name}</span>
+                    <div>
+                        <button onclick="acceptApplicant('${projectId}', '${applicant.userId}')" class="btn-accept">✅ รับเข้าทีม</button>
+                        <button onclick="rejectApplicant('${projectId}', '${applicant.userId}')" class="btn-reject">❌ ปฏิเสธ</button>
+                    </div>
+                `;
+                listContainer.appendChild(item);
+            });
+
+        } else {
+            listContainer.innerHTML = '<p style="text-align: center; color: red;">โหลดข้อมูลล้มเหลว</p>';
+        }
+    } catch (error) {
+        listContainer.innerHTML = '<p style="text-align: center; color: red;">เชื่อมต่อเซิร์ฟเวอร์ไม่ได้</p>';
+    }
+}
+
+// ==========================================
+// 10. ฟังก์ชันกดยอมรับ / ปฏิเสธผู้สมัคร
+// ==========================================
+
+// ฟังก์ชัน: รับเข้าทีม
+async function acceptApplicant(projectId, applicantId) {
+    const token = localStorage.getItem('token');
+    
+    try {
+        const response = await fetch(`http://localhost:5000/api/projects/${projectId}/accept`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            // ส่ง ID ของคนที่สมัครใส่กล่องพัสดุไปให้ Backend
+            body: JSON.stringify({ applicantId }) 
+        });
+
+        if (response.ok) {
+            alert('รับเพื่อนเข้าทีมเรียบร้อยแล้ว! 🎉');
+            // สั่งให้โหลดป๊อปอัปรายชื่อผู้สมัครใหม่อีกรอบ (รายชื่อคนที่เพิ่งรับไปจะได้หายไปจากหน้าจอ)
+            viewApplicants(projectId); 
+        } else {
+            const data = await response.json();
+            alert(`ไม่สามารถทำรายการได้: ${data.error}`);
+        }
+    } catch (error) {
+        alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
+    }
+}
+
+// ฟังก์ชัน: ปฏิเสธ
+async function rejectApplicant(projectId, applicantId) {
+    // ถามย้ำเผื่อกดผิด
+    if (!confirm('แน่ใจหรือไม่ที่จะปฏิเสธคำขอนี้?')) return;
+
+    const token = localStorage.getItem('token');
+    
+    try {
+        const response = await fetch(`http://localhost:5000/api/projects/${projectId}/reject`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ applicantId })
+        });
+
+        if (response.ok) {
+            alert('ปฏิเสธคำขอเรียบร้อยแล้ว ❌');
+            viewApplicants(projectId); // รีเฟรชหน้าต่างรายชื่อ
+        } else {
+            const data = await response.json();
+            alert(`ไม่สามารถทำรายการได้: ${data.error}`);
+        }
+    } catch (error) {
+        alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
+    }
+}
