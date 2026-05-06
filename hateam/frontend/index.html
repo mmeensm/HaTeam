@@ -35,7 +35,8 @@
             ยังไม่มีบัญชีใช่ไหม? <span>สมัครสมาชิกที่นี่</span>
         </p>
     </div>
-    
+
+
     <div class="dashboard-container" id="dashboard-section" style="display: none;">
         
         <nav class="navbar">
@@ -54,6 +55,32 @@
         </div>
         
     </div>
+
+
+    <div id="create-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h3>✨ สร้างโปรเจกต์ใหม่</h3>
+            <form id="create-project-form">
+                
+                <div class="input-group">
+                    <label for="project-title">ชื่อโปรเจกต์</label>
+                    <input type="text" id="project-title" placeholder="เช่น แอปหาเพื่อนทำโปรเจกต์จบ" required>
+                </div>
+                
+                <div class="input-group">
+                    <label for="project-desc">รายละเอียด</label>
+                    <textarea id="project-desc" rows="4" placeholder="ต้องการเพื่อนร่วมทีมที่ถนัด Node.js..." required style="width: 100%; padding: 12px; border: 2px solid #ecf0f1; border-radius: 8px; font-family: inherit; box-sizing: border-box; resize: vertical;"></textarea>
+                </div>
+                
+                <div class="modal-actions">
+                    <button type="button" id="cancel-btn" class="btn-outline">ยกเลิก</button>
+                    <button type="submit" class="btn-main">สร้างโปรเจกต์เลย!</button>
+                </div>
+                
+            </form>
+        </div>
+    </div>
+
     <script src="script.js"></script>
 
 </body>

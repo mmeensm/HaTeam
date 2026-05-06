@@ -131,3 +131,57 @@ async function fetchProjects() {
         projectList.innerHTML = '<p style="color: red;">โหลดข้อมูลไม่สำเร็จ กรุณาลองรีเฟรชหน้าเว็บ</p>';
     }
 }
+
+// ==========================================
+// 5. ระบบสร้างโปรเจกต์ใหม่ (Modal & Create)
+// ==========================================
+const createModal = document.getElementById('create-modal');
+const showCreateBtn = document.getElementById('show-create-btn');
+const cancelBtn = document.getElementById('cancel-btn');
+const createProjectForm = document.getElementById('create-project-form');
+
+// เมื่อกดปุ่ม "+ สร้างโปรเจกต์ใหม่" ให้โชว์ป๊อปอัป
+showCreateBtn.addEventListener('click', () => {
+    createModal.style.display = 'flex';
+});
+
+// เมื่อกดปุ่ม "ยกเลิก" ให้ซ่อนป๊อปอัปและล้างข้อมูล
+cancelBtn.addEventListener('click', () => {
+    createModal.style.display = 'none';
+    createProjectForm.reset();
+});
+
+// เมื่อกด "สร้างโปรเจกต์เลย!"
+createProjectForm.addEventListener('submit', async (e) => {
+    e.preventDefault(); // กันหน้าเว็บรีเฟรช
+
+    const title = document.getElementById('project-title').value;
+    const description = document.getElementById('project-desc').value;
+    
+    // ดึง Token ประจำตัวที่ระบบซ่อนไว้ในเครื่องออกมา เพื่อใช้ยืนยันตัวตนว่าใครเป็นคนสร้าง
+    const token = localStorage.getItem('token'); 
+
+    try {
+        const response = await fetch('http://localhost:5000/api/projects', {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}` // แนบกุญแจไปให้ Middleware ตรวจ
+            },
+            body: JSON.stringify({ title, description })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            alert('สร้างโปรเจกต์สำเร็จแล้ว!');
+            createModal.style.display = 'none'; // ปิดป๊อปอัป
+            createProjectForm.reset(); // ล้างฟอร์ม
+            fetchProjects(); // รีเฟรชกระดานเพื่อโชว์โปรเจกต์ใหม่ทันที!
+        } else {
+            alert(`แจ้งเตือน: ${data.error}`);
+        }
+    } catch (error) {
+        alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
+    }
+});
