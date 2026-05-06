@@ -55,14 +55,20 @@ authForm.addEventListener('submit', async (e) => {
 
         const data = await response.json();
 
+        console.log("แอบดูข้อมูลจาก Backend ตอนล็อกอิน:", data);
+
         if (response.ok) {
-            // ถ้าสำเร็จ!
             if (isLogin) {
-                alert('เข้าสู่ระบบสำเร็จ! (เดี๋ยวเราจะพาไปหน้า Dashboard กัน)');
-                // เก็บ Token ไว้ในกล่องเก็บของของเบราว์เซอร์ เพื่อใช้ยืนยันตัวตนทีหลัง
+                alert('เข้าสู่ระบบสำเร็จ!');
                 localStorage.setItem('token', data.token);
-                document.getElementById('auth-section').style.display = 'none'; // ซ่อนหน้า Login
-                document.getElementById('dashboard-section').style.display = 'flex'; // โชว์หน้า Dashboard
+                
+                // -----> เพิ่มบรรทัดนี้ลงไปครับ <-----
+                // ดึงชื่อของผู้ใช้ที่เซิร์ฟเวอร์ส่งกลับมา (เช่น data.user.name หรือตามที่ Backend ออกแบบไว้)
+                // สมมติว่า Backend ส่งกลับมาในชื่อ data.name นะครับ
+                localStorage.setItem('currentUserName', data.name);
+                
+                document.getElementById('auth-section').style.display = 'none';
+                document.getElementById('dashboard-section').style.display = 'flex';
                 fetchProjects();
             } else {
                 alert('สมัครสมาชิกสำเร็จ! ลองเข้าสู่ระบบด้วยรหัสที่เพิ่งสมัครดูนะ');
@@ -119,13 +125,33 @@ async function fetchProjects() {
         projects.forEach(project => {
             const card = document.createElement('div');
             card.className = 'project-card';
+            
+            // ดึงชื่อคนที่กำลังล็อกอินอยู่ออกมาเช็ก
+            const currentUserName = localStorage.getItem('currentUserName');
+            console.log("ชื่อเจ้าของโปรเจกต์:", project.owner, " | ชื่อคนที่ล็อกอินอยู่:", currentUserName);
+
+            // สร้างตัวแปรไว้เก็บปุ่มที่จะโชว์
+            let actionButtons = '';
+
+            if (project.owner === currentUserName) {
+                // ถ้าเราเป็นเจ้าของ -> โชว์ปุ่ม ลบ และ แก้ไข
+                actionButtons = `
+                    <button onclick="deleteProject('${project.id}')" class="btn-delete">🗑️ ลบ</button>
+                    <button onclick="openEditModal('${project.id}', '${project.title}', '${project.description}')" class="btn-edit">✏️ แก้ไข</button>
+                `;
+            } else {
+                // ถ้าคนอื่นเป็นเจ้าของ -> โชว์ปุ่ม ขอเข้าร่วมทีม
+                actionButtons = `
+                    <button onclick="joinProject('${project.id}')" class="btn-join">🤝 ขอเข้าร่วมทีม</button>
+                `;
+            }
+
             card.innerHTML = `
                 <h4>${project.title}</h4>
                 <p>${project.description}</p>
-                <div style="margin-top: 15px;">
+                <div style="margin-top: 15px; overflow: hidden;">
                     <span class="owner">👑 สร้างโดย: ${project.owner}</span>
-                    <button onclick="deleteProject('${project.id}')" class="btn-delete">🗑️ ลบ</button>
-                    <button onclick="openEditModal('${project.id}', '${project.title}', '${project.description}')" class="btn-edit">✏️ แก้ไข</button>
+                    ${actionButtons}
                 </div>
             `;
             projectList.appendChild(card);
@@ -273,3 +299,34 @@ editProjectForm.addEventListener('submit', async (e) => {
         alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
     }
 });
+
+// ==========================================
+// 8. ระบบขอเข้าร่วมทีม (Join Project)
+// ==========================================
+async function joinProject(projectId) {
+    if (!confirm('คุณต้องการส่งคำขอเข้าร่วมทีมนี้ใช่หรือไม่?')) return;
+
+    const token = localStorage.getItem('token');
+
+    try {
+        // ยิง POST ไปที่ API สำหรับการเข้าร่วมทีม (ตัวอย่าง: /api/projects/:id/join)
+        const response = await fetch(`http://localhost:5000/api/projects/${projectId}/join`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            alert('ส่งคำขอเข้าร่วมทีมสำเร็จแล้ว! รอหัวหน้าทีมตอบรับนะ ✨');
+            fetchProjects(); // รีเฟรชหน้าจอ
+        } else {
+            alert(`ไม่สามารถเข้าร่วมได้: ${data.error}`);
+        }
+    } catch (error) {
+        alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
+    }
+}
+

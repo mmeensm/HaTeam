@@ -35,7 +35,11 @@ exports.login = async (req, res) => {
     if (!isMatch) return res.status(401).json({ error: 'อีเมลหรือรหัสผ่านไม่ถูกต้อง' });
 
     const token = jwt.sign({ userId: user.userId, email: user.email }, process.env.JWT_SECRET, { expiresIn: '1d' });
-    res.json({ message: 'เข้าสู่ระบบสำเร็จ', token });
+    res.json({ 
+        message: 'เข้าสู่ระบบสำเร็จ', 
+        token,
+        name: user.name // <--- เพิ่มบรรทัดนี้เข้าไปครับ
+    });
   } catch (error) {
     res.status(500).json({ error: 'Login failed' });
   } finally {

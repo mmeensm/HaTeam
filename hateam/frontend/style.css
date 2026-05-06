@@ -248,3 +248,25 @@ p.subtitle {
 .btn-edit:hover {
     background-color: #e67e22;
 }
+
+/* =========================================
+   สไตล์สำหรับปุ่มขอเข้าร่วมทีม (Join Team)
+   ========================================= */
+.btn-join {
+    background-color: #2ecc71; /* สีเขียวเหนี่ยวทรัพย์ */
+    color: white;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: bold;
+    float: right;
+    transition: background 0.3s, transform 0.1s;
+}
+
+.btn-join:hover {
+    background-color: #27ae60;
+    transform: scale(1.05); /* ขยายใหญ่ขึ้นนิดนึงตอนเมาส์ชี้ */
+}
+

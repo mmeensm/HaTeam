@@ -17,7 +17,10 @@ exports.createProject = async (req, res) => {
   if (!title) return res.status(400).json({ error: 'กรุณาตั้งชื่อโปรเจกต์' });
   const session = driver.session();
   try {
-    const query = `MATCH (u:User {userId: $userId}) CREATE (p:Project {projectId: randomUUID(), title: $title, description: $description, status: 'Recruiting'}) CREATE (u)-[:OWNS_PROJECT]->(p) RETURN p`;
+    const query = `
+      MATCH (u:User {userId: $userId}) 
+      CREATE (p:Project {projectId: randomUUID(), title: $title, description: $description, status: 'Recruiting'}) 
+      CREATE (u)-[:OWNS_PROJECT]->(p) RETURN p`;
     await session.run(query, { userId: req.user.userId, title, description });
     res.status(201).json({ message: 'สร้างโปรเจกต์สำเร็จ' });
   } catch (error) { res.status(500).json({ error: 'สร้างไม่สำเร็จ' }); } finally { await session.close(); }
@@ -49,4 +52,37 @@ exports.deleteProject = async (req, res) => {
     await session.run(`MATCH (p:Project {projectId: $projectId}) DETACH DELETE p`, { projectId });
     res.json({ message: 'ลบเรียบร้อย' });
   } catch (error) { res.status(500).json({ error: 'ลบไม่สำเร็จ' }); } finally { await session.close(); }
+};
+
+// // ==========================================
+// ฟังก์ชัน: ขอเข้าร่วมทีม (Join Project)
+// ==========================================
+exports.joinProject = async (req, res) => {
+    const projectId = req.params.id; 
+    const userId = req.user.userId;  
+
+    const session = driver.session();
+    try {
+        // หา User และ Project ให้เจอ แล้วลากเส้นหากัน
+        const query = `
+            MATCH (u:User {userId: $userId}) 
+            MATCH (p:Project {projectId: $projectId}) 
+            MERGE (u)-[r:APPLIED_TO]->(p) 
+            RETURN r
+        `;
+
+        const result = await session.run(query, { userId, projectId });
+
+        if (result.records.length === 0) {
+            return res.status(404).json({ error: 'ไม่พบโปรเจกต์ หรือ เกิดข้อผิดพลาดในการเชื่อมโยง' });
+        }
+
+        res.status(200).json({ message: 'ส่งคำขอเข้าร่วมทีมสำเร็จแล้ว! รอหัวหน้าทีมตอบรับนะ ✨' });
+
+    } catch (error) {
+        console.error('Join Project Error:', error);
+        res.status(500).json({ error: 'ไม่สามารถส่งคำขอเข้าร่วมทีมได้' });
+    } finally {
+        await session.close();
+    }
 };
