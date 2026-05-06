@@ -210,3 +210,41 @@ p.subtitle {
     margin-top: 0;
 }
 
+/* =========================================
+   สไตล์สำหรับปุ่มลบโปรเจกต์
+   ========================================= */
+.btn-delete {
+    background-color: #ff4757;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    float: right; /* ดันปุ่มไปอยู่ขวาสุด */
+    transition: background 0.3s;
+}
+
+.btn-delete:hover {
+    background-color: #ff6b81;
+}
+
+/* =========================================
+   สไตล์สำหรับปุ่มแก้ไขโปรเจกต์
+   ========================================= */
+.btn-edit {
+    background-color: #f39c12; /* สีส้ม */
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    float: right;
+    margin-right: 10px; /* เว้นระยะห่างจากปุ่มลบนิดนึง */
+    transition: background 0.3s;
+}
+
+.btn-edit:hover {
+    background-color: #e67e22;
+}

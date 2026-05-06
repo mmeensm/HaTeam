@@ -116,14 +116,17 @@ async function fetchProjects() {
             return;
         }
 
-        // วนลูปข้อมูลที่ได้มา แล้วสร้างเป็นกล่องการ์ดทีละอัน
         projects.forEach(project => {
             const card = document.createElement('div');
             card.className = 'project-card';
             card.innerHTML = `
                 <h4>${project.title}</h4>
                 <p>${project.description}</p>
-                <span class="owner">👑 สร้างโดย: ${project.owner}</span>
+                <div style="margin-top: 15px;">
+                    <span class="owner">👑 สร้างโดย: ${project.owner}</span>
+                    <button onclick="deleteProject('${project.id}')" class="btn-delete">🗑️ ลบ</button>
+                    <button onclick="openEditModal('${project.id}', '${project.title}', '${project.description}')" class="btn-edit">✏️ แก้ไข</button>
+                </div>
             `;
             projectList.appendChild(card);
         });
@@ -180,6 +183,91 @@ createProjectForm.addEventListener('submit', async (e) => {
             fetchProjects(); // รีเฟรชกระดานเพื่อโชว์โปรเจกต์ใหม่ทันที!
         } else {
             alert(`แจ้งเตือน: ${data.error}`);
+        }
+    } catch (error) {
+        alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
+    }
+});
+
+// ==========================================
+// 6. ระบบลบโปรเจกต์ (Delete)
+// ==========================================
+async function deleteProject(projectId) {
+    // ถามย้ำอีกรอบเพื่อความชัวร์ เผื่อผู้ใช้มือลั่น
+    if (!confirm('แน่ใจนะว่าต้องการลบโปรเจกต์นี้ทิ้ง?')) return;
+
+    const token = localStorage.getItem('token'); // หยิบกุญแจยืนยันตัวตนมา
+
+    try {
+        // ยิงคำสั่ง DELETE ไปหา Backend พร้อมแนบ ID ของโปรเจกต์นั้นไป
+        const response = await fetch(`http://localhost:5000/api/projects/${projectId}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        if (response.ok) {
+            alert('ลบโปรเจกต์เรียบร้อยแล้ว!');
+            fetchProjects(); // สั่งให้รีเฟรชกระดานเพื่ออัปเดตหน้าจอทันที
+        } else {
+            const data = await response.json();
+            alert(`ไม่สามารถลบได้: ${data.error}`);
+        }
+    } catch (error) {
+        alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
+    }
+}
+
+// ==========================================
+// 7. ระบบแก้ไขโปรเจกต์ (Edit)
+// ==========================================
+const editModal = document.getElementById('edit-modal');
+const cancelEditBtn = document.getElementById('cancel-edit-btn');
+const editProjectForm = document.getElementById('edit-project-form');
+
+// เมื่อผู้ใช้กดปุ่ม ✏️ แก้ไข ให้เอาข้อมูลเดิมมาใส่ในกล่องไว้รอเลย
+function openEditModal(id, title, description) {
+    document.getElementById('edit-project-id').value = id;
+    document.getElementById('edit-project-title').value = title;
+    document.getElementById('edit-project-desc').value = description;
+    
+    // โชว์ป๊อปอัป
+    editModal.style.display = 'flex';
+}
+
+// กดปุ่มยกเลิก ให้ซ่อนป๊อปอัป
+cancelEditBtn.addEventListener('click', () => {
+    editModal.style.display = 'none';
+});
+
+// เวลากด "บันทึกการแก้ไข"
+editProjectForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const id = document.getElementById('edit-project-id').value;
+    const title = document.getElementById('edit-project-title').value;
+    const description = document.getElementById('edit-project-desc').value;
+    const token = localStorage.getItem('token');
+
+    try {
+        // ยิงไปหา Backend โดยใช้เมธอด PUT (มาตรฐานการอัปเดตข้อมูล)
+        const response = await fetch(`http://localhost:5000/api/projects/${id}`, {
+            method: 'PUT',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ title, description })
+        });
+
+        if (response.ok) {
+            alert('อัปเดตข้อมูลโปรเจกต์เรียบร้อย!');
+            editModal.style.display = 'none'; // ซ่อนป๊อปอัป
+            fetchProjects(); // โหลดหน้ากระดานใหม่เพื่อดูความเปลี่ยนแปลง
+        } else {
+            const data = await response.json();
+            alert(`ไม่สามารถแก้ไขได้: ${data.error}`);
         }
     } catch (error) {
         alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');

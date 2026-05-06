@@ -81,6 +81,31 @@
         </div>
     </div>
 
+    <div id="edit-modal" class="modal" style="display: none;">
+        <div class="modal-content" style="border-top: 8px solid #3498db;"> <h3>✏️ แก้ไขโปรเจกต์</h3>
+            <form id="edit-project-form">
+                
+                <input type="hidden" id="edit-project-id"> 
+                
+                <div class="input-group">
+                    <label for="edit-project-title">ชื่อโปรเจกต์</label>
+                    <input type="text" id="edit-project-title" required>
+                </div>
+                
+                <div class="input-group">
+                    <label for="edit-project-desc">รายละเอียด</label>
+                    <textarea id="edit-project-desc" rows="4" required style="width: 100%; padding: 12px; border: 2px solid #ecf0f1; border-radius: 8px; font-family: inherit; box-sizing: border-box; resize: vertical;"></textarea>
+                </div>
+                
+                <div class="modal-actions">
+                    <button type="button" id="cancel-edit-btn" class="btn-outline">ยกเลิก</button>
+                    <button type="submit" class="btn-main" style="background-color: #3498db;">บันทึกการแก้ไข</button>
+                </div>
+                
+            </form>
+        </div>
+    </div>
+
     <script src="script.js"></script>
 
 </body>
