@@ -13,6 +13,7 @@ router.post('/:id/accept', verifyToken, projectController.acceptApplicant);
 router.post('/:id/reject', verifyToken, projectController.rejectApplicant);
 router.post('/:id/leave', verifyToken, projectController.leaveProject);
 router.put('/:id/close', verifyToken, projectController.closeRecruitment);
+router.post('/:id/kick', verifyToken, projectController.kickMember);
 
 module.exports = router;
 

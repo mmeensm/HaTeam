@@ -159,17 +159,29 @@ async function fetchProjects() {
                 }
             }
 
-            // ในไฟล์ script.js ช่วงท้ายของ projects.forEach...
+            // 👇👇👇 โค้ดใหม่ (Step 3) ถูกแทรกตรงนี้ครับ 👇👇👇
+            let membersHTML = '<span style="color: #999;">ยังไม่มีสมาชิก</span>';
+            
+            if (project.members && project.members.length > 0 && project.members[0] !== null) {
+                membersHTML = project.members.map(memberName => {
+                    if (project.owner === currentUserName) {
+                        // ถ้าเราเป็นเจ้าของ ให้มีปุ่ม ❌ ตามหลังชื่อ
+                        return `${memberName} <button onclick="kickMember('${project.id}', '${memberName}')" style="background:none; border:none; color:#e74c3c; cursor:pointer; font-size: 14px; padding: 0;" title="เตะออกจากทีม">❌</button>`;
+                    } else {
+                        return memberName;
+                    }
+                }).join(', ');
+            }
+            // 👆👆👆 จบโค้ดใหม่ 👆👆👆
+
+            // 📝 ในส่วนของ card.innerHTML จะถูกแก้ให้สั้นลงโดยใช้ ${membersHTML} แทน
             card.innerHTML = `
                 <h4>${project.title}</h4>
                 <p>${project.description}</p>
                 
                 <div style="margin: 10px 0; font-size: 0.9em; color: #555;">
                     <strong>👥 สมาชิกในทีม:</strong> 
-                    ${project.members && project.members.length > 0 && project.members[0] !== null
-                        ? project.members.join(', ') 
-                        : '<span style="color: #999;">ยังไม่มีสมาชิก</span>'}
-                </div>
+                    ${membersHTML} </div>
 
                 <div style="margin-top: 15px; overflow: hidden;">
                     <span class="owner">👑 สร้างโดย: ${project.owner}</span>
@@ -178,6 +190,7 @@ async function fetchProjects() {
             `;
             projectList.appendChild(card);
         });
+
     } catch (error) {
         projectList.innerHTML = '<p style="color: red;">โหลดข้อมูลไม่สำเร็จ กรุณาลองรีเฟรชหน้าเว็บ</p>';
     }
@@ -512,6 +525,35 @@ async function closeRecruitment(projectId) {
         if (response.ok) {
             alert('ปิดรับสมัครเรียบร้อยแล้ว! 🛑');
             fetchProjects(); // โหลดกระดานใหม่
+        } else {
+            const data = await response.json();
+            alert(`เกิดข้อผิดพลาด: ${data.error}`);
+        }
+    } catch (error) {
+        alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
+    }
+}
+
+// ==========================================
+// 13. ฟังก์ชันเตะสมาชิกออก (Kick Member)
+// ==========================================
+async function kickMember(projectId, memberName) {
+    if (!confirm(`คุณแน่ใจหรือไม่ที่จะเตะ "${memberName}" ออกจากทีม? 🥾`)) return;
+
+    const token = localStorage.getItem('token');
+    try {
+        const response = await fetch(`http://localhost:5000/api/projects/${projectId}/kick`, {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}` 
+            },
+            body: JSON.stringify({ memberName }) // ส่งชื่อเป้าหมายไปให้ Backend เชือด!
+        });
+
+        if (response.ok) {
+            alert(`เตะ ${memberName} ออกจากทีมเรียบร้อยแล้ว!`);
+            fetchProjects(); // รีเฟรชหน้ากระดานใหม่ ชื่อคนนั้นจะหายไปทันที
         } else {
             const data = await response.json();
             alert(`เกิดข้อผิดพลาด: ${data.error}`);

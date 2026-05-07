@@ -230,3 +230,27 @@ exports.closeRecruitment = async (req, res) => {
         await session.close();
     }
 };
+
+// ==========================================
+// 11. เตะสมาชิกออกจากทีม (Kick Member)
+// ==========================================
+exports.kickMember = async (req, res) => {
+    const projectId = req.params.id;
+    const { memberName } = req.body; // รับ "ชื่อ" ของคนที่จะเตะมา
+    const session = driver.session();
+
+    try {
+        // หาความสัมพันธ์ MEMBER_OF ระหว่างคนที่ชื่อตรงกัน กับ โปรเจกต์นี้ แล้วลบทิ้ง!
+        const query = `
+            MATCH (u:User {name: $memberName})-[r:MEMBER_OF]->(p:Project {projectId: $projectId})
+            DELETE r
+        `;
+        await session.run(query, { memberName, projectId });
+        res.status(200).json({ message: 'เตะออกจากทีมเรียบร้อย' });
+    } catch (error) {
+        console.error('Kick Error:', error);
+        res.status(500).json({ error: 'เกิดข้อผิดพลาดในการเตะสมาชิก' });
+    } finally {
+        await session.close();
+    }
+};
