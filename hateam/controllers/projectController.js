@@ -200,3 +200,33 @@ exports.leaveProject = async (req, res) => {
         await session.close();
     }
 };
+
+// ==========================================
+// 10. ปิดรับสมัคร (Close Recruitment)
+// ==========================================
+exports.closeRecruitment = async (req, res) => {
+    const projectId = req.params.id;
+    const userId = req.user.userId; // ต้องเอา ID เจ้าของมาเช็ก เพื่อป้องกันคนอื่นแอบมากดปิด
+    const session = driver.session();
+
+    try {
+        // MATCH หาโปรเจกต์ที่เราเป็นเจ้าของ แล้ว SET status ให้กลายเป็น 'Full'
+        const query = `
+            MATCH (u:User {userId: $userId})-[:OWNS_PROJECT]->(p:Project {projectId: $projectId})
+            SET p.status = 'Full'
+            RETURN p
+        `;
+        const result = await session.run(query, { userId, projectId });
+
+        if (result.records.length === 0) {
+            return res.status(403).json({ error: 'ไม่มีสิทธิ์ หรือไม่พบโปรเจกต์' });
+        }
+
+        res.status(200).json({ message: 'ปิดรับสมัครเรียบร้อยแล้ว!' });
+    } catch (error) {
+        console.error('Close Recruitment Error:', error);
+        res.status(500).json({ error: 'เกิดข้อผิดพลาดในการปิดรับสมัคร' });
+    } finally {
+        await session.close();
+    }
+};

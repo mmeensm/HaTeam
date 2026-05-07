@@ -131,26 +131,32 @@ async function fetchProjects() {
             console.log("ชื่อเจ้าของโปรเจกต์:", project.owner, " | ชื่อคนที่ล็อกอินอยู่:", currentUserName);
 
             // สร้างตัวแปรไว้เก็บปุ่มที่จะโชว์
+            const isFull = project.status === 'Full';
             let actionButtons = '';
 
-            // เช็กเงื่อนไข 3 แบบ: เป็นเจ้าของ / เป็นสมาชิกแล้ว / เป็นคนนอก
             if (project.owner === currentUserName) {
-                // 1. ถ้าเราเป็นเจ้าของ -> โชว์ปุ่ม ลบ, แก้ไข, ดูผู้สมัคร
+                // ถ้าเราเป็นเจ้าของ
                 actionButtons = `
                     <button onclick="deleteProject('${project.id}')" class="btn-delete">🗑️ ลบ</button>
                     <button onclick="openEditModal('${project.id}', '${project.title}', '${project.description}')" class="btn-edit">✏️ แก้ไข</button>
                     <button onclick="viewApplicants('${project.id}')" class="btn-edit" style="background-color: #9b59b6;">👀 ดูผู้สมัคร</button>
                 `;
+                // ถ้ายังไม่เต็ม ให้โชว์ปุ่ม "ปิดรับสมัคร" ด้วย
+                if (!isFull) {
+                    actionButtons += `<button onclick="closeRecruitment('${project.id}')" class="btn-edit" style="background-color: #34495e;">🔒 ปิดรับสมัคร</button>`;
+                }
             } else if (project.members && project.members.includes(currentUserName)) {
-                // 2. ถ้าเราเป็นสมาชิกในทีมแล้ว (ชื่อเราอยู่ในอาเรย์ members) -> โชว์ปุ่ม ออกจากทีม
+                // ถ้าเป็นสมาชิกในทีมแล้ว โชว์ปุ่มออก
                 actionButtons = `
                     <button onclick="leaveProject('${project.id}')" class="btn-delete" style="background-color: #e67e22;">👋 ออกจากทีม</button>
                 `;
             } else {
-                // 3. ถ้าเป็นคนนอก -> โชว์ปุ่ม ขอเข้าร่วมทีม
-                actionButtons = `
-                    <button onclick="joinProject('${project.id}')" class="btn-join">🤝 ขอเข้าร่วมทีม</button>
-                `;
+                // ถ้าเป็นคนนอก ต้องเช็กก่อนว่าโปรเจกต์เต็มหรือยัง
+                if (isFull) {
+                    actionButtons = `<span style="color: #e74c3c; font-weight: bold;">🚫 ปิดรับสมัครแล้ว (ทีมเต็ม)</span>`;
+                } else {
+                    actionButtons = `<button onclick="joinProject('${project.id}')" class="btn-join">🤝 ขอเข้าร่วมทีม</button>`;
+                }
             }
 
             // ในไฟล์ script.js ช่วงท้ายของ projects.forEach...
@@ -481,6 +487,31 @@ async function leaveProject(projectId) {
         if (response.ok) {
             alert('คุณได้ออกจากทีมเรียบร้อยแล้ว 👋');
             fetchProjects(); // รีเฟรชหน้ากระดาน
+        } else {
+            const data = await response.json();
+            alert(`เกิดข้อผิดพลาด: ${data.error}`);
+        }
+    } catch (error) {
+        alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
+    }
+}
+
+// ==========================================
+// 12. ฟังก์ชันปิดรับสมัคร (Close Recruitment)
+// ==========================================
+async function closeRecruitment(projectId) {
+    if (!confirm('ถ้าปิดรับสมัครแล้ว คนอื่นจะขอเข้าร่วมไม่ได้อีก แน่ใจนะ? 🔒')) return;
+
+    const token = localStorage.getItem('token');
+    try {
+        const response = await fetch(`http://localhost:5000/api/projects/${projectId}/close`, {
+            method: 'PUT',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (response.ok) {
+            alert('ปิดรับสมัครเรียบร้อยแล้ว! 🛑');
+            fetchProjects(); // โหลดกระดานใหม่
         } else {
             const data = await response.json();
             alert(`เกิดข้อผิดพลาด: ${data.error}`);
