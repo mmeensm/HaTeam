@@ -13,6 +13,8 @@ exports.getAllProjects = async (req, res) => {
              p.title AS title, 
              p.description AS description, 
              p.status AS status, 
+             p.skills AS skills,
+             p.maxMembers AS maxMembers,
              u.name AS owner, 
              collect(m.name) AS members
     `;
@@ -22,6 +24,8 @@ exports.getAllProjects = async (req, res) => {
       title: record.get('title'),
       description: record.get('description'),
       status: record.get('status'),
+      skills: record.get('skills') || [],
+      maxMembers: record.get('maxMembers') ? (record.get('maxMembers').toNumber ? record.get('maxMembers').toNumber() : record.get('maxMembers')) : 0,
       owner: record.get('owner'),
       members: record.get('members')
     }));
@@ -37,15 +41,28 @@ exports.getAllProjects = async (req, res) => {
 // 2. สร้างโปรเจกต์
 // ==========================================
 exports.createProject = async (req, res) => {
-  const { title, description } = req.body;
+  const { title, description, skills, maxMembers } = req.body;
   if (!title) return res.status(400).json({ error: 'กรุณาตั้งชื่อโปรเจกต์' });
   const session = driver.session();
   try {
     const query = `
       MATCH (u:User {userId: $userId}) 
-      CREATE (p:Project {projectId: randomUUID(), title: $title, description: $description, status: 'Recruiting'}) 
+      CREATE (p:Project {
+        projectId: randomUUID(), 
+        title: $title, 
+        description: $description, 
+        skills: $skills,
+        maxMembers: toInteger($maxMembers),
+        status: 'Recruiting'
+      }) 
       CREATE (u)-[:OWNS_PROJECT]->(p) RETURN p`;
-    await session.run(query, { userId: req.user.userId, title, description });
+    await session.run(query, { 
+      userId: req.user.userId, 
+      title, 
+      description,
+      skills: skills || [],
+      maxMembers: parseInt(maxMembers) || 0
+    });
     res.status(201).json({ message: 'สร้างโปรเจกต์สำเร็จ' });
   } catch (error) { res.status(500).json({ error: 'สร้างไม่สำเร็จ' }); } finally { await session.close(); }
 };
@@ -141,15 +158,35 @@ exports.acceptApplicant = async (req, res) => {
     const projectId = req.params.id;
     const { applicantId } = req.body;
     const session = driver.session();
+
     try {
-        const query = `
+        // 1. รับคนเข้าทีม และลบเส้นคำขอ
+        const acceptQuery = `
             MATCH (u:User {userId: $applicantId})-[r:APPLIED_TO]->(p:Project {projectId: $projectId})
             DELETE r
             MERGE (u)-[:MEMBER_OF]->(p)
+            RETURN p
         `;
-        await session.run(query, { applicantId, projectId });
+        const result = await session.run(acceptQuery, { applicantId, projectId });
+        
+        if (result.records.length === 0) {
+            return res.status(404).json({ error: 'ไม่พบคำขอ หรือเกิดข้อผิดพลาด' });
+        }
+
+        // 2. Auto-Close: เช็กจำนวนคนว่าเต็มหรือยัง
+        const checkFullQuery = `
+            MATCH (p:Project {projectId: $projectId})
+            OPTIONAL MATCH (m:User)-[:MEMBER_OF]->(p)
+            WITH p, count(m) AS currentMembers
+            WHERE p.maxMembers IS NOT NULL AND currentMembers >= p.maxMembers
+            SET p.status = 'Full'
+            RETURN p
+        `;
+        await session.run(checkFullQuery, { projectId });
+
         res.status(200).json({ message: 'รับเข้าทีมสำเร็จ!' });
     } catch (error) {
+        console.error('Accept Error:', error);
         res.status(500).json({ error: 'เกิดข้อผิดพลาดในการรับเข้าทีม' });
     } finally {
         await session.close();
@@ -250,6 +287,143 @@ exports.kickMember = async (req, res) => {
     } catch (error) {
         console.error('Kick Error:', error);
         res.status(500).json({ error: 'เกิดข้อผิดพลาดในการเตะสมาชิก' });
+    } finally {
+        await session.close();
+    }
+};
+
+// ==========================================
+// 12. ดึงข้อมูลงานของฉัน (My Tasks)
+// ==========================================
+exports.getMyTasks = async (req, res) => {
+    const userId = req.user.userId;
+    const session = driver.session();
+    try {
+        // หางานที่รอตอบรับ
+        const appliedQuery = `
+            MATCH (u:User {userId: $userId})-[r:APPLIED_TO]->(p:Project)
+            OPTIONAL MATCH (owner:User)-[:OWNS_PROJECT]->(p)
+            OPTIONAL MATCH (m:User)-[:MEMBER_OF]->(p)
+            RETURN p.projectId AS id, p.title AS title, p.description AS description, p.status AS status,
+                   p.skills AS skills, p.maxMembers AS maxMembers, owner.name AS owner, collect(m.name) AS members
+        `;
+        const appliedResult = await session.run(appliedQuery, { userId });
+        const appliedProjects = appliedResult.records.map(record => ({
+            id: record.get('id'),
+            title: record.get('title'),
+            description: record.get('description'),
+            status: record.get('status'),
+            skills: record.get('skills') || [],
+            maxMembers: record.get('maxMembers') ? (record.get('maxMembers').toNumber ? record.get('maxMembers').toNumber() : record.get('maxMembers')) : 0,
+            owner: record.get('owner'),
+            members: record.get('members')
+        }));
+
+        // หางานที่กำลังทำ (เป็นสมาชิก)
+        const memberQuery = `
+            MATCH (u:User {userId: $userId})-[:MEMBER_OF]->(p:Project)
+            OPTIONAL MATCH (owner:User)-[:OWNS_PROJECT]->(p)
+            OPTIONAL MATCH (m:User)-[:MEMBER_OF]->(p)
+            RETURN p.projectId AS id, p.title AS title, p.description AS description, p.status AS status,
+                   p.skills AS skills, p.maxMembers AS maxMembers, owner.name AS owner, collect(m.name) AS members
+        `;
+        const memberResult = await session.run(memberQuery, { userId });
+        const memberProjects = memberResult.records.map(record => ({
+            id: record.get('id'),
+            title: record.get('title'),
+            description: record.get('description'),
+            status: record.get('status'),
+            skills: record.get('skills') || [],
+            maxMembers: record.get('maxMembers') ? (record.get('maxMembers').toNumber ? record.get('maxMembers').toNumber() : record.get('maxMembers')) : 0,
+            owner: record.get('owner'),
+            members: record.get('members')
+        }));
+
+        res.json({ appliedProjects, memberProjects });
+    } catch (error) {
+        res.status(500).json({ error: 'ไม่สามารถดึงข้อมูลงานของฉันได้' });
+    } finally {
+        await session.close();
+    }
+};
+
+// ==========================================
+// 13. ยกเลิกการสมัคร (Cancel Application)
+// ==========================================
+exports.cancelApplication = async (req, res) => {
+    const projectId = req.params.id;
+    const userId = req.user.userId;
+    const session = driver.session();
+    try {
+        const query = `
+            MATCH (u:User {userId: $userId})-[r:APPLIED_TO]->(p:Project {projectId: $projectId})
+            DELETE r
+        `;
+        await session.run(query, { userId, projectId });
+        res.status(200).json({ message: 'ยกเลิกการสมัครเรียบร้อยแล้ว' });
+    } catch (error) {
+        res.status(500).json({ error: 'เกิดข้อผิดพลาดในการยกเลิกการสมัคร' });
+    } finally {
+        await session.close();
+    }
+};
+
+// ==========================================
+// ระบบแนะนำโปรเจกต์ (Smart Matching)
+// ==========================================
+exports.getRecommendedProjects = async (req, res) => {
+    const userId = req.user.userId;
+    const session = driver.session();
+
+    try {
+        // Cypher อัจฉริยะ: ดึงสกิล User มาเทียบกับสกิล Project แล้วนับจำนวนที่ตรงกัน (Match Score)
+        const query = `
+            MATCH (u:User {userId: $userId})
+            MATCH (p:Project {status: 'Recruiting'})
+            WHERE NOT (u)-[:OWNS_PROJECT]->(p) AND NOT (u)-[:MEMBER_OF]->(p)
+            
+            // หาจุดร่วมของ Skills
+            WITH p, u, 
+                 [skill IN p.skills WHERE skill IN u.skills] AS matchedSkills
+                 
+            // คำนวณคะแนน (ยิ่งสกิลตรงกันเยอะ คะแนนยิ่งสูง)
+            WITH p, size(matchedSkills) AS matchScore
+            WHERE matchScore > 0 // เอาเฉพาะงานที่มีสกิลตรงอย่างน้อย 1 อย่าง
+            
+            // ดึงเจ้าของและสมาชิกมาด้วย
+            MATCH (owner:User)-[:OWNS_PROJECT]->(p)
+            OPTIONAL MATCH (m:User)-[:MEMBER_OF]->(p)
+            
+            RETURN p.projectId AS id, 
+                   p.title AS title, 
+                   p.description AS description, 
+                   p.status AS status,
+                   p.skills AS skills,
+                   p.maxMembers AS maxMembers,
+                   owner.name AS owner, 
+                   collect(m.name) AS members,
+                   matchScore
+            ORDER BY matchScore DESC
+            LIMIT 5
+        `;
+        const result = await session.run(query, { userId });
+        
+        const projects = result.records.map(record => ({
+            id: record.get('id'),
+            title: record.get('title'),
+            description: record.get('description'),
+            status: record.get('status'),
+            skills: record.get('skills') || [],
+            maxMembers: record.get('maxMembers') || 0,
+            owner: record.get('owner'),
+            members: record.get('members'),
+            matchScore: record.get('matchScore')
+        }));
+        
+        res.json(projects);
+    } catch (error) {
+        console.error('Smart Match Error:', error);
+        res.status(500).json({ error: 'ไม่สามารถดึงข้อมูลแนะนำได้' });
     } finally {
         await session.close();
     }

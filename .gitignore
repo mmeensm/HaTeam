@@ -137,3 +137,6 @@ dist
 
 **/hateam_data/
 hateam/hateam_data/
+
+node_modules/
+hateam_data/

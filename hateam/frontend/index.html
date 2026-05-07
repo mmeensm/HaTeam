@@ -8,32 +8,34 @@
 </head>
 <body>
 
-    <div class="auth-container" id="auth-section">
-        <h1>Ha<span>Team</span></h1>
-        <p class="subtitle">ระบบจับคู่เพื่อนทำโปรเจกต์ที่ดีที่สุด</p>
+    <div id="auth-section">
+        <div class="auth-container">
+            <h1>Ha<span>Team</span></h1>
+            <p class="subtitle">ระบบจับคู่เพื่อนทำโปรเจกต์ที่ดีที่สุด</p>
 
-        <form id="auth-form">
-            <div class="input-group" id="name-field" style="display: none;">
-                <label for="name">ชื่อเรียกของคุณ (Display Name)</label>
-                <input type="text" id="name" placeholder="ใส่ชื่อให้เพื่อนเรียกง่ายๆ">
-            </div>
+            <form id="auth-form">
+                <div class="input-group" id="name-field" style="display: none;">
+                    <label for="name">ชื่อเรียกของคุณ (Display Name)</label>
+                    <input type="text" id="name" placeholder="ใส่ชื่อให้เพื่อนเรียกง่ายๆ">
+                </div>
 
-            <div class="input-group">
-                <label for="email">อีเมลมหาวิทยาลัย</label>
-                <input type="email" id="email" placeholder="example@swu.ac.th" required>
-            </div>
+                <div class="input-group">
+                    <label for="email">อีเมลมหาวิทยาลัย</label>
+                    <input type="email" id="email" placeholder="example@swu.ac.th" required>
+                </div>
 
-            <div class="input-group">
-                <label for="password">รหัสผ่าน</label>
-                <input type="password" id="password" placeholder="••••••••" required>
-            </div>
+                <div class="input-group">
+                    <label for="password">รหัสผ่าน</label>
+                    <input type="password" id="password" placeholder="••••••••" required>
+                </div>
 
-            <button type="submit" class="btn-main" id="submit-btn">เข้าสู่ระบบ</button>
-        </form>
+                <button type="submit" class="btn-main" id="submit-btn">เข้าสู่ระบบ</button>
+            </form>
 
-        <p class="toggle-text" id="toggle-mode">
-            ยังไม่มีบัญชีใช่ไหม? <span>สมัครสมาชิกที่นี่</span>
-        </p>
+            <p class="toggle-text" id="toggle-mode">
+                ยังไม่มีบัญชีใช่ไหม? <span>สมัครสมาชิกที่นี่</span>
+            </p>
+        </div>
     </div>
 
 
@@ -41,17 +43,83 @@
         
         <nav class="navbar">
             <h2>Ha<span>Team</span></h2>
+            <div class="nav-links">
+                <a href="#" class="nav-item active" id="nav-home">หน้าหลัก</a>
+                <a href="#" class="nav-item" id="nav-mytasks">งานของฉัน</a>
+                <a href="#" class="nav-item" id="nav-profile">โปรไฟล์</a>
+            </div>
             <button id="logout-btn" class="btn-outline">ออกจากระบบ</button>
         </nav>
 
         <div class="dashboard-content">
-            <div class="header-action">
-                <h3>กระดานหาเพื่อนทำโปรเจกต์</h3>
-                <button id="show-create-btn" class="btn-main" style="width: auto; padding: 10px 20px;">+ สร้างโปรเจกต์ใหม่</button>
-            </div>
-
-            <div class="project-grid" id="project-list">
+            <div id="home-section">
+                <div class="header-action">
+                    <h3>กระดานหาเพื่อนทำโปรเจกต์</h3>
+                    <button id="show-create-btn" class="btn-main" style="width: auto;">+ สร้างโปรเจกต์ใหม่</button>
                 </div>
+
+                <div id="recommended-section" style="margin-bottom: 40px; display: none; background: #fffbf0; padding: 15px; border-radius: 10px; border-left: 5px solid #f1c40f;">
+                    <h4 style="color: #f39c12; margin-bottom: 10px;">✨ แนะนำสำหรับคุณ (โปรเจกต์ที่ตรงกับสกิล)</h4>
+                    <div class="project-grid" id="recommended-list"></div>
+                </div>
+
+                <h4 style="margin-bottom: 10px; color: #34495e;">🗂️ โปรเจกต์ที่เปิดรับทั้งหมด</h4>
+                <div class="project-grid" id="project-list"></div>
+            </div>
+            
+            <div id="mytasks-section" style="display: none;">
+                <div class="header-action">
+                    <h3>งานที่รอตอบรับ</h3>
+                </div>
+                <div class="project-grid" id="pending-tasks-list">
+                    <p style="color: #7f8c8d;">ไม่มีงานที่รอตอบรับ</p>
+                </div>
+
+                <div class="header-action" style="margin-top: 40px;">
+                    <h3>งานที่กำลังทำอยู่</h3>
+                </div>
+                <div class="project-grid" id="active-tasks-list">
+                    <p style="color: #7f8c8d;">ยังไม่มีงานที่กำลังทำ</p>
+                </div>
+            </div>
+            
+            <div id="profile-section" style="display: none;">
+                <div class="header-action">
+                    <h3>โปรไฟล์ของฉัน</h3>
+                </div>
+                <div style="background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 25px;">
+                    <form id="profile-form">
+                        <div class="input-group">
+                            <label for="profile-name">ชื่อ (ไม่สามารถแก้ไขได้)</label>
+                            <input type="text" id="profile-name" disabled style="background-color: #ecf0f1; cursor: not-allowed;">
+                        </div>
+                        <div class="input-group">
+                            <label for="profile-email">อีเมล (ไม่สามารถแก้ไขได้)</label>
+                            <input type="email" id="profile-email" disabled style="background-color: #ecf0f1; cursor: not-allowed;">
+                        </div>
+                        <div class="input-group">
+                            <label for="profile-contact">ข้อมูลติดต่อเพิ่มเติม (เช่น เบอร์โทรศัพท์, Line ID)</label>
+                            <input type="text" id="profile-contact" placeholder="Line ID: mylineid">
+                        </div>
+                        <div class="input-group" style="margin-top: 15px;">
+                            <label>ทักษะความสามารถ (พิมพ์แล้วกด Enter):</label>
+                            <div class="tag-input-container" id="profile-tags-container">
+                                <input type="text" id="profile-skill-input" class="skill-input-field" placeholder="เช่น CSS, Kotlin, พูดภาษาอังกฤษ...">
+                            </div>
+                        </div>
+                        <button type="submit" class="btn-main" style="width: auto; padding: 10px 20px;">บันทึกการเปลี่ยนแปลง</button>
+                    </form>
+                </div>
+
+                <div class="header-action">
+                    <h3>ประวัติการทำงาน (โปรเจกต์ที่ทำเสร็จแล้ว)</h3>
+                </div>
+                <div style="background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
+                    <ul id="profile-history-list" style="list-style-type: none; padding: 0; margin: 0;">
+                        <li style="color: #7f8c8d;">ยังไม่มีประวัติการทำงาน</li>
+                    </ul>
+                </div>
+            </div>
         </div>
         
     </div>
@@ -70,6 +138,18 @@
                 <div class="input-group">
                     <label for="project-desc">รายละเอียด</label>
                     <textarea id="project-desc" rows="4" placeholder="ต้องการเพื่อนร่วมทีมที่ถนัด Node.js..." required style="width: 100%; padding: 12px; border: 2px solid #ecf0f1; border-radius: 8px; font-family: inherit; box-sizing: border-box; resize: vertical;"></textarea>
+                </div>
+                
+                <div class="input-group">
+                    <label>สกิลที่ต้องการ (พิมพ์แล้วกด Enter):</label>
+                    <div class="tag-input-container" id="project-tags-container">
+                        <input type="text" id="project-skill-input" class="skill-input-field" placeholder="เช่น CSS, JavaScript...">
+                    </div>
+                </div>
+                
+                <div class="input-group">
+                    <label for="project-max-members">จำนวนคนที่รับ (ไม่รวมหัวหน้าทีม)</label>
+                    <input type="number" id="project-max-members" min="1" placeholder="เช่น 3" required>
                 </div>
                 
                 <div class="modal-actions">
@@ -114,6 +194,53 @@
             
             <div id="applicants-list" style="max-height: 300px; overflow-y: auto;">
                 <p style="text-align: center; color: #7f8c8d;">กำลังโหลดข้อมูล...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal รายละเอียดโปรเจกต์ (Phase 1) -->
+    <div id="project-detail-modal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 600px; border-top: 8px solid #2ecc71;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
+                <h3 id="detail-title" style="margin: 0; font-size: 24px; color: #2c3e50;"></h3>
+                <button onclick="closeProjectDetailModal()" style="background: none; border: none; font-size: 20px; cursor: pointer;">❌</button>
+            </div>
+            
+            <p id="detail-desc" style="color: #555; line-height: 1.6; margin-bottom: 15px;"></p>
+            
+            <div style="margin-bottom: 15px;">
+                <strong>👑 หัวหน้าทีม:</strong> <span id="detail-owner"></span>
+            </div>
+
+            <div style="margin-bottom: 15px;">
+                <strong>💡 ทักษะที่ต้องการ:</strong>
+                <div id="detail-skills" style="margin-top: 8px; display: flex; flex-wrap: wrap; gap: 8px;"></div>
+            </div>
+
+            <div style="margin-bottom: 20px;">
+                <strong>👥 สมาชิก (<span id="detail-member-count"></span>):</strong>
+                <ul id="detail-members-list" style="padding-left: 20px; margin-top: 8px; list-style-type: none; padding: 0;"></ul>
+            </div>
+
+            <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+
+            <!-- โซนสำหรับ Owner จัดการผู้สมัคร -->
+            <div id="owner-actions-section" style="display: none;">
+                <h4 style="margin-bottom: 10px;">📩 ผู้ที่สนใจเข้าร่วมทีม</h4>
+                <div id="detail-applicants-list" style="max-height: 200px; overflow-y: auto; margin-bottom: 15px;">
+                    <p style="color: #7f8c8d;">ยังไม่มีผู้สมัคร</p>
+                </div>
+                <div style="text-align: right; display: flex; justify-content: flex-end; gap: 10px;">
+                    <button id="btn-close-recruitment" class="btn-outline">🔒 ปิดรับสมัคร</button>
+                    <button id="btn-delete-project" class="btn-delete" style="float: none;">🗑️ ลบโปรเจกต์</button>
+                </div>
+            </div>
+
+            <!-- โซนสำหรับคนทั่วไป (Applicant) -->
+            <div id="applicant-actions-section" style="display: none; text-align: right;">
+                <span id="applicant-status-msg" style="color: #f39c12; font-weight: bold; margin-right: 15px; display: none;"></span>
+                <button id="btn-join-project" class="btn-main" style="width: auto; padding: 10px 20px;">🤝 ขอเข้าร่วมทีม</button>
+                <button id="btn-leave-project" class="btn-delete" style="width: auto; padding: 10px 20px; display: none; float: none;">👋 ออกจากทีม</button>
             </div>
         </div>
     </div>

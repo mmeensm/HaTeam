@@ -3,13 +3,10 @@ body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     background-color: #f4f7f6;
     margin: 0;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
+    min-height: 100vh;
 }
 
-/* กล่องการ์ดตรงกลาง */
+/* กล่องการ์ดตรงกลาง - ใช้ flex layout แยกต่างหาก */
 .auth-container {
     background: white;
     padding: 40px;
@@ -19,6 +16,17 @@ body {
     max-width: 400px;
     border-top: 8px solid #9b59b6; /* ขอบบนสีม่วง */
     text-align: center;
+    margin: auto;
+}
+
+/* wrapper สำหรับ auth ให้อยู่กึ่งกลาง */
+#auth-section {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 20px;
+    box-sizing: border-box;
 }
 
 /* หัวข้อแอป */
@@ -106,21 +114,39 @@ p.subtitle {
     min-height: 100vh;
     display: flex;
     flex-direction: column;
-    align-items: center;
+    /* ไม่ใส่ align-items: center ที่นี่ เพื่อให้ navbar เต็มความกว้าง */
 }
 
-/* แถบเมนูด้านบน */
+/* แถบเมนูด้านบน - sticky ให้ติดด้านบนตลอด */
 .navbar {
+    position: sticky;
+    top: 0;
+    z-index: 100;
     width: 100%;
     background: white;
     padding: 15px 40px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
     display: flex;
     justify-content: space-between;
     align-items: center;
     box-sizing: border-box;
 }
 .navbar h2 { margin: 0; font-size: 24px; }
+.nav-links {
+    display: flex;
+    gap: 20px;
+}
+.nav-item {
+    text-decoration: none;
+    color: #7f8c8d;
+    font-weight: bold;
+    padding: 5px 10px;
+    border-radius: 8px;
+    transition: 0.3s;
+}
+.nav-item:hover { color: #2ecc71; background: #f4f7f6; }
+.nav-item.active { color: #2ecc71; background: #e8f8f5; }
+
 .btn-outline {
     background: white;
     border: 2px solid #e74c3c;
@@ -139,6 +165,7 @@ p.subtitle {
     max-width: 1000px;
     padding: 30px;
     box-sizing: border-box;
+    margin: 0 auto; /* ใช้ margin auto แทน เพื่อ center เนื้อหา */
 }
 .header-action {
     display: flex;
@@ -164,10 +191,23 @@ p.subtitle {
     border-left: 6px solid #f1c40f; /* ขอบซ้ายสีเหลือง */
     transition: transform 0.2s;
 }
-.project-card:hover { transform: translateY(-5px); }
+.project-card:hover { transform: translateY(-5px); box-shadow: 0 8px 25px rgba(0,0,0,0.1); }
 .project-card h4 { margin: 0 0 10px 0; color: #34495e; font-size: 18px; }
 .project-card p { color: #7f8c8d; font-size: 14px; margin-bottom: 15px; line-height: 1.5; }
 .project-card .owner { font-size: 12px; color: #9b59b6; font-weight: bold; }
+
+/* Tag สกิล */
+.skill-tag {
+    background: #e8f8f5;
+    color: #27ae60;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: bold;
+    display: inline-block;
+    margin-right: 5px;
+    margin-bottom: 5px;
+}
 
 /* =========================================
    สไตล์สำหรับ Modal (ป๊อปอัปสร้างโปรเจกต์)
@@ -309,4 +349,52 @@ p.subtitle {
     cursor: pointer;
     font-size: 12px;
     margin-left: 5px;
+}
+
+/* ระบบ Tag Input */
+.tag-input-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    border: 1px solid #ccc;
+    padding: 8px;
+    border-radius: 4px;
+    min-height: 45px;
+    background: white;
+}
+
+.skill-tag-item {
+    background: #3498db;
+    color: white;
+    padding: 4px 10px;
+    border-radius: 15px;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.skill-tag-remove {
+    cursor: pointer;
+    font-weight: bold;
+    background: rgba(255,255,255,0.2);
+    border-radius: 50%;
+    width: 16px;
+    height: 16px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.skill-tag-remove:hover {
+    background: #e74c3c;
+}
+
+.skill-input-field {
+    border: none;
+    outline: none;
+    flex-grow: 1;
+    min-width: 120px;
+    padding: 4px;
+    font-size: 14px;
 }

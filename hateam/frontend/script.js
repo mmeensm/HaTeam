@@ -8,6 +8,44 @@ const emailInput = document.getElementById('email');
 const passwordInput = document.getElementById('password');
 
 let isLogin = true; // ตั้งสถานะเริ่มต้นให้เป็นหน้า "เข้าสู่ระบบ"
+let allProjects = []; // เก็บโปรเจกต์ทั้งหมดไว้ใช้ใน Modal
+
+// --- ระบบ Navigation Bar ---
+const navHome = document.getElementById('nav-home');
+const navMyTasks = document.getElementById('nav-mytasks');
+const navProfile = document.getElementById('nav-profile');
+const sectionHome = document.getElementById('home-section');
+const sectionMyTasks = document.getElementById('mytasks-section');
+const sectionProfile = document.getElementById('profile-section');
+
+function switchTab(tab) {
+    if(!navHome) return;
+    navHome.classList.remove('active');
+    navMyTasks.classList.remove('active');
+    navProfile.classList.remove('active');
+    sectionHome.style.display = 'none';
+    sectionMyTasks.style.display = 'none';
+    sectionProfile.style.display = 'none';
+    
+    if (tab === 'home') {
+        navHome.classList.add('active');
+        sectionHome.style.display = 'block';
+        fetchProjects();
+        fetchRecommendedProjects(); 
+    } else if (tab === 'mytasks') {
+        navMyTasks.classList.add('active');
+        sectionMyTasks.style.display = 'block';
+        fetchMyTasks();
+    } else if (tab === 'profile') {
+        navProfile.classList.add('active');
+        sectionProfile.style.display = 'block';
+        fetchProfile();
+    }
+}
+
+if(navHome) navHome.addEventListener('click', (e) => { e.preventDefault(); switchTab('home'); });
+if(navMyTasks) navMyTasks.addEventListener('click', (e) => { e.preventDefault(); switchTab('mytasks'); });
+if(navProfile) navProfile.addEventListener('click', (e) => { e.preventDefault(); switchTab('profile'); });
 
 // 1. ระบบสลับหน้า Login / Register
 toggleModeText.addEventListener('click', () => {
@@ -61,15 +99,11 @@ authForm.addEventListener('submit', async (e) => {
             if (isLogin) {
                 alert('เข้าสู่ระบบสำเร็จ!');
                 localStorage.setItem('token', data.token);
-                
-                // -----> เพิ่มบรรทัดนี้ลงไปครับ <-----
-                // ดึงชื่อของผู้ใช้ที่เซิร์ฟเวอร์ส่งกลับมา (เช่น data.user.name หรือตามที่ Backend ออกแบบไว้)
-                // สมมติว่า Backend ส่งกลับมาในชื่อ data.name นะครับ
                 localStorage.setItem('currentUserName', data.name);
                 
                 document.getElementById('auth-section').style.display = 'none';
-                document.getElementById('dashboard-section').style.display = 'flex';
-                fetchProjects();
+                document.getElementById('dashboard-section').style.display = 'block';
+                switchTab('home');
             } else {
                 alert('สมัครสมาชิกสำเร็จ! ลองเข้าสู่ระบบด้วยรหัสที่เพิ่งสมัครดูนะ');
                 toggleModeText.click(); // สลับกลับมาหน้า Login ให้อัตโนมัติ
@@ -106,17 +140,15 @@ logoutBtn.addEventListener('click', () => {
 // ==========================================
 async function fetchProjects() {
     const projectList = document.getElementById('project-list');
-    projectList.innerHTML = '<p>กำลังโหลดข้อมูล...</p>'; // โชว์ข้อความตอนกำลังโหลด
+    projectList.innerHTML = '<p>กำลังโหลดข้อมูล...</p>';
 
     try {
-        // ยิงไปหา API ดูโปรเจกต์ทั้งหมดที่เราทำไว้ใน Backend
         const response = await fetch('http://localhost:5000/api/projects');
         const projects = await response.json();
+        allProjects = projects;
 
-        // เคลียร์ข้อความกำลังโหลดทิ้ง
         projectList.innerHTML = '';
 
-        // ถ้ายังไม่มีโปรเจกต์เลย
         if (projects.length === 0) {
             projectList.innerHTML = '<p>ยังไม่มีโปรเจกต์ในระบบเลย มากดสร้างคนแรกกันเถอะ!</p>';
             return;
@@ -125,74 +157,110 @@ async function fetchProjects() {
         projects.forEach(project => {
             const card = document.createElement('div');
             card.className = 'project-card';
+            card.style.cursor = 'pointer';
+            card.onclick = () => openProjectDetailModal(project.id);
             
-            // ดึงชื่อคนที่กำลังล็อกอินอยู่ออกมาเช็ก
-            const currentUserName = localStorage.getItem('currentUserName');
-            console.log("ชื่อเจ้าของโปรเจกต์:", project.owner, " | ชื่อคนที่ล็อกอินอยู่:", currentUserName);
+            let skillsHTML = '';
+            if (project.skills && project.skills.length > 0) {
+                skillsHTML = `<div style="margin-bottom: 10px;">` + 
+                    project.skills.map(s => `<span class="skill-tag">${s.trim()}</span>`).join('') + 
+                    `</div>`;
+            }
 
-            // สร้างตัวแปรไว้เก็บปุ่มที่จะโชว์
+            const currentMembersCount = (project.members && project.members[0] !== null) ? project.members.length : 0;
+            const maxMembersCount = project.maxMembers || 0;
+            const memberStatus = maxMembersCount > 0 ? `${currentMembersCount}/${maxMembersCount}` : `${currentMembersCount}`;
             const isFull = project.status === 'Full';
-            let actionButtons = '';
-
-            if (project.owner === currentUserName) {
-                // ถ้าเราเป็นเจ้าของ
-                actionButtons = `
-                    <button onclick="deleteProject('${project.id}')" class="btn-delete">🗑️ ลบ</button>
-                    <button onclick="openEditModal('${project.id}', '${project.title}', '${project.description}')" class="btn-edit">✏️ แก้ไข</button>
-                    <button onclick="viewApplicants('${project.id}')" class="btn-edit" style="background-color: #9b59b6;">👀 ดูผู้สมัคร</button>
-                `;
-                // ถ้ายังไม่เต็ม ให้โชว์ปุ่ม "ปิดรับสมัคร" ด้วย
-                if (!isFull) {
-                    actionButtons += `<button onclick="closeRecruitment('${project.id}')" class="btn-edit" style="background-color: #34495e;">🔒 ปิดรับสมัคร</button>`;
-                }
-            } else if (project.members && project.members.includes(currentUserName)) {
-                // ถ้าเป็นสมาชิกในทีมแล้ว โชว์ปุ่มออก
-                actionButtons = `
-                    <button onclick="leaveProject('${project.id}')" class="btn-delete" style="background-color: #e67e22;">👋 ออกจากทีม</button>
-                `;
-            } else {
-                // ถ้าเป็นคนนอก ต้องเช็กก่อนว่าโปรเจกต์เต็มหรือยัง
-                if (isFull) {
-                    actionButtons = `<span style="color: #e74c3c; font-weight: bold;">🚫 ปิดรับสมัครแล้ว (ทีมเต็ม)</span>`;
-                } else {
-                    actionButtons = `<button onclick="joinProject('${project.id}')" class="btn-join">🤝 ขอเข้าร่วมทีม</button>`;
-                }
-            }
-
-            // 👇👇👇 โค้ดใหม่ (Step 3) ถูกแทรกตรงนี้ครับ 👇👇👇
-            let membersHTML = '<span style="color: #999;">ยังไม่มีสมาชิก</span>';
             
-            if (project.members && project.members.length > 0 && project.members[0] !== null) {
-                membersHTML = project.members.map(memberName => {
-                    if (project.owner === currentUserName) {
-                        // ถ้าเราเป็นเจ้าของ ให้มีปุ่ม ❌ ตามหลังชื่อ
-                        return `${memberName} <button onclick="kickMember('${project.id}', '${memberName}')" style="background:none; border:none; color:#e74c3c; cursor:pointer; font-size: 14px; padding: 0;" title="เตะออกจากทีม">❌</button>`;
-                    } else {
-                        return memberName;
-                    }
-                }).join(', ');
-            }
-            // 👆👆👆 จบโค้ดใหม่ 👆👆👆
+            let statusBadge = isFull 
+                ? `<span style="color: white; background: #e74c3c; padding: 2px 8px; border-radius: 10px; font-size: 11px;">เต็มแล้ว</span>` 
+                : `<span style="color: white; background: #3498db; padding: 2px 8px; border-radius: 10px; font-size: 11px;">กำลังรับสมัคร</span>`;
 
-            // 📝 ในส่วนของ card.innerHTML จะถูกแก้ให้สั้นลงโดยใช้ ${membersHTML} แทน
             card.innerHTML = `
-                <h4>${project.title}</h4>
-                <p>${project.description}</p>
-                
-                <div style="margin: 10px 0; font-size: 0.9em; color: #555;">
-                    <strong>👥 สมาชิกในทีม:</strong> 
-                    ${membersHTML} </div>
-
-                <div style="margin-top: 15px; overflow: hidden;">
-                    <span class="owner">👑 สร้างโดย: ${project.owner}</span>
-                    ${actionButtons}
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <h4>${project.title}</h4>
+                    ${statusBadge}
+                </div>
+                <p style="margin-top: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${project.description}</p>
+                ${skillsHTML}
+                <div style="margin-top: 15px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #eee; padding-top: 10px;">
+                    <span class="owner">👑 ${project.owner}</span>
+                    <span style="font-size: 12px; color: #7f8c8d; font-weight: bold;">👥 ${memberStatus} คน</span>
                 </div>
             `;
             projectList.appendChild(card);
         });
-
     } catch (error) {
         projectList.innerHTML = '<p style="color: red;">โหลดข้อมูลไม่สำเร็จ กรุณาลองรีเฟรชหน้าเว็บ</p>';
+    }
+}
+
+// ==========================================
+// ระบบ Smart Matching (ดึงโปรเจกต์แนะนำ)
+// ==========================================
+async function fetchRecommendedProjects() {
+    const recommendedSection = document.getElementById('recommended-section');
+    const recommendedList = document.getElementById('recommended-list');
+    const token = localStorage.getItem('token');
+
+    try {
+        const response = await fetch('http://localhost:5000/api/projects/recommended', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (response.ok) {
+            const projects = await response.json();
+            
+            // ถ้ามีโปรเจกต์แนะนำ ให้โชว์โซนนี้
+            if (projects.length > 0) {
+                recommendedSection.style.display = 'block';
+                recommendedList.innerHTML = '';
+
+                projects.forEach(project => {
+                    // วาดการ์ดแบบเดียวกับหน้าหลัก
+                    const card = document.createElement('div');
+                    card.className = 'project-card';
+                    card.style.cursor = 'pointer';
+                    card.style.border = '1px solid #f1c40f'; // เน้นกรอบสีทอง
+                    card.onclick = () => openProjectDetailModal(project.id);
+                    
+                    let skillsHTML = '';
+                    if (project.skills && project.skills.length > 0) {
+                        skillsHTML = `<div style="margin-bottom: 10px;">` + 
+                            project.skills.map(s => `<span class="skill-tag">${s.trim()}</span>`).join('') + 
+                            `</div>`;
+                    }
+
+                    const currentMembersCount = project.members ? project.members.length : 0;
+                    const maxMembersCount = project.maxMembers || 0;
+                    const memberStatus = maxMembersCount > 0 ? `${currentMembersCount}/${maxMembersCount}` : `${currentMembersCount}`;
+
+                    card.innerHTML = `
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                            <h4>${project.title}</h4>
+                            <span style="color: white; background: #f39c12; padding: 2px 8px; border-radius: 10px; font-size: 11px;">🔥 แมตช์!</span>
+                        </div>
+                        <p style="margin-top: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${project.description}</p>
+                        ${skillsHTML}
+                        <div style="margin-top: 15px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #eee; padding-top: 10px;">
+                            <span class="owner">👑 ${project.owner}</span>
+                            <span style="font-size: 12px; color: #7f8c8d; font-weight: bold;">👥 ${memberStatus} คน</span>
+                        </div>
+                    `;
+                    // ยัดลงใน Array allProjects ด้วย เพื่อให้เปิด Modal ได้
+                    if (!allProjects.find(p => p.id === project.id)) {
+                        allProjects.push(project);
+                    }
+                    
+                    recommendedList.appendChild(card);
+                });
+            } else {
+                // ถ้าไม่มีโปรเจกต์ที่ตรงกับสกิลเลย ก็ซ่อนโซนนี้ไป
+                recommendedSection.style.display = 'none';
+            }
+        }
+    } catch (error) {
+        console.error('ไม่สามารถโหลดโปรเจกต์แนะนำได้', error);
     }
 }
 
@@ -216,13 +284,17 @@ cancelBtn.addEventListener('click', () => {
 });
 
 // เมื่อกด "สร้างโปรเจกต์เลย!"
+// เมื่อกด "สร้างโปรเจกต์เลย!"
 createProjectForm.addEventListener('submit', async (e) => {
-    e.preventDefault(); // กันหน้าเว็บรีเฟรช
+    e.preventDefault();
 
     const title = document.getElementById('project-title').value;
     const description = document.getElementById('project-desc').value;
+    const maxMembers = document.getElementById('project-max-members').value;
     
-    // ดึง Token ประจำตัวที่ระบบซ่อนไว้ในเครื่องออกมา เพื่อใช้ยืนยันตัวตนว่าใครเป็นคนสร้าง
+    // 👇 แก้ไขตรงนี้: ดึงข้อมูลสกิลจากตัวแปร Tag
+    const skills = currentProjectSkills;
+    
     const token = localStorage.getItem('token'); 
 
     try {
@@ -230,18 +302,23 @@ createProjectForm.addEventListener('submit', async (e) => {
             method: 'POST',
             headers: { 
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}` // แนบกุญแจไปให้ Middleware ตรวจ
+                'Authorization': `Bearer ${token}` 
             },
-            body: JSON.stringify({ title, description })
+            body: JSON.stringify({ title, description, skills, maxMembers })
         });
 
         const data = await response.json();
 
         if (response.ok) {
             alert('สร้างโปรเจกต์สำเร็จแล้ว!');
-            createModal.style.display = 'none'; // ปิดป๊อปอัป
-            createProjectForm.reset(); // ล้างฟอร์ม
-            fetchProjects(); // รีเฟรชกระดานเพื่อโชว์โปรเจกต์ใหม่ทันที!
+            createModal.style.display = 'none';
+            createProjectForm.reset();
+            
+            // 👇 แก้ไขตรงนี้: เคลียร์กล่อง Tag ให้ว่างเปล่าพร้อมสร้างงานถัดไป
+            currentProjectSkills = [];
+            renderTags(currentProjectSkills, 'project-tags-container', 'project-skill-input', 'project');
+            
+            fetchProjects();
         } else {
             alert(`แจ้งเตือน: ${data.error}`);
         }
@@ -562,3 +639,481 @@ async function kickMember(projectId, memberName) {
         alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
     }
 }
+
+// ==========================================
+// 14. Project Detail Modal (Phase 1)
+// ==========================================
+let currentDetailProjectId = null;
+
+function closeProjectDetailModal() {
+    document.getElementById('project-detail-modal').style.display = 'none';
+    currentDetailProjectId = null;
+}
+
+async function openProjectDetailModal(projectId) {
+    const project = allProjects.find(p => p.id === projectId);
+    if (!project) return;
+    
+    currentDetailProjectId = projectId;
+    const currentUserName = localStorage.getItem('currentUserName');
+    const isOwner = project.owner === currentUserName;
+    const isMember = project.members && project.members.includes(currentUserName);
+    const isFull = project.status === 'Full';
+    
+    // Set data
+    document.getElementById('detail-title').innerText = project.title;
+    document.getElementById('detail-desc').innerText = project.description;
+    document.getElementById('detail-owner').innerText = project.owner;
+    
+    // Skills
+    const skillsContainer = document.getElementById('detail-skills');
+    if (project.skills && project.skills.length > 0) {
+        skillsContainer.innerHTML = project.skills.map(s => `<span class="skill-tag">${s}</span>`).join('');
+    } else {
+        skillsContainer.innerHTML = '<span style="color: #999; font-size: 14px;">ไม่ได้ระบุ</span>';
+    }
+    
+    // Members
+    const membersList = document.getElementById('detail-members-list');
+    const currentMembersCount = (project.members && project.members[0] !== null) ? project.members.length : 0;
+    const maxMembersCount = project.maxMembers || 0;
+    document.getElementById('detail-member-count').innerText = maxMembersCount > 0 ? `${currentMembersCount}/${maxMembersCount}` : currentMembersCount;
+    
+    if (currentMembersCount > 0) {
+        membersList.innerHTML = project.members.map(m => {
+            if (isOwner) {
+                return `<li style="margin-bottom: 8px;">${m} <button onclick="handleKick('${project.id}', '${m}')" style="background:none; border:none; color:#e74c3c; cursor:pointer; font-size: 12px;">[เตะออก]</button></li>`;
+            }
+            return `<li style="margin-bottom: 8px;">${m}</li>`;
+        }).join('');
+    } else {
+        membersList.innerHTML = '<li style="color: #999;">ยังไม่มีสมาชิก</li>';
+    }
+    
+    // Conditional Rendering
+    const ownerSection = document.getElementById('owner-actions-section');
+    const applicantSection = document.getElementById('applicant-actions-section');
+    
+    if (isOwner) {
+        ownerSection.style.display = 'block';
+        applicantSection.style.display = 'none';
+        
+        document.getElementById('btn-close-recruitment').onclick = async () => { 
+            await closeRecruitment(projectId); 
+            closeProjectDetailModal(); 
+        };
+        document.getElementById('btn-delete-project').onclick = async () => { 
+            await deleteProject(projectId); 
+            closeProjectDetailModal(); 
+        };
+        
+        loadApplicantsForDetail(projectId);
+    } else {
+        ownerSection.style.display = 'none';
+        applicantSection.style.display = 'block';
+        
+        const btnJoin = document.getElementById('btn-join-project');
+        const btnLeave = document.getElementById('btn-leave-project');
+        const statusMsg = document.getElementById('applicant-status-msg');
+        
+        btnJoin.style.display = 'none';
+        btnLeave.style.display = 'none';
+        statusMsg.style.display = 'none';
+        
+        if (isMember) {
+            btnLeave.style.display = 'inline-block';
+            btnLeave.onclick = async () => { 
+                await leaveProject(projectId); 
+                closeProjectDetailModal(); 
+            };
+        } else if (isFull) {
+            statusMsg.innerText = 'เต็มแล้ว (ปิดรับสมัคร)';
+            statusMsg.style.display = 'inline-block';
+        } else {
+            btnJoin.style.display = 'inline-block';
+            btnJoin.onclick = async () => { 
+                await joinProject(projectId); 
+                statusMsg.innerText = 'รอการตอบรับ...';
+                statusMsg.style.display = 'inline-block';
+                btnJoin.style.display = 'none';
+            };
+        }
+    }
+    
+    document.getElementById('project-detail-modal').style.display = 'flex';
+}
+
+async function loadApplicantsForDetail(projectId) {
+    const listContainer = document.getElementById('detail-applicants-list');
+    listContainer.innerHTML = '<p style="color: #7f8c8d;">กำลังโหลด...</p>';
+    const token = localStorage.getItem('token');
+
+    try {
+        const response = await fetch(`http://localhost:5000/api/projects/${projectId}/applicants`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (response.ok) {
+            const applicants = await response.json();
+            if (applicants.length === 0) {
+                listContainer.innerHTML = '<p style="color: #7f8c8d;">ยังไม่มีผู้สมัครในขณะนี้ 😢</p>';
+                return;
+            }
+            listContainer.innerHTML = '';
+            applicants.forEach(applicant => {
+                const item = document.createElement('div');
+                item.className = 'applicant-item';
+                item.style.padding = '8px';
+                item.innerHTML = `
+                    <span class="applicant-name">👤 ${applicant.name}</span>
+                    <div>
+                        <button onclick="handleAccept('${projectId}', '${applicant.userId}')" class="btn-accept">✅ รับ</button>
+                        <button onclick="handleReject('${projectId}', '${applicant.userId}')" class="btn-reject">❌ ปฏิเสธ</button>
+                    </div>
+                `;
+                listContainer.appendChild(item);
+            });
+        } else {
+            listContainer.innerHTML = '<p style="color: red;">โหลดข้อมูลล้มเหลว</p>';
+        }
+    } catch (error) {
+        listContainer.innerHTML = '<p style="color: red;">เชื่อมต่อเซิร์ฟเวอร์ไม่ได้</p>';
+    }
+}
+
+// Wrapper เพื่อป้องกันการไปเรียก viewApplicants ที่จะเปิด Modal เก่าซ้อน
+async function handleAccept(projectId, applicantId) {
+    const token = localStorage.getItem('token');
+    try {
+        const response = await fetch(`http://localhost:5000/api/projects/${projectId}/accept`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ applicantId }) 
+        });
+        if (response.ok) {
+            alert('รับเพื่อนเข้าทีมเรียบร้อยแล้ว! 🎉');
+            await fetchProjects();
+            openProjectDetailModal(projectId); // Reload current modal
+        } else {
+            const data = await response.json();
+            alert(`ไม่สามารถทำรายการได้: ${data.error}`);
+        }
+    } catch (error) { alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์'); }
+}
+
+async function handleReject(projectId, applicantId) {
+    if (!confirm('แน่ใจหรือไม่ที่จะปฏิเสธคำขอนี้?')) return;
+    const token = localStorage.getItem('token');
+    try {
+        const response = await fetch(`http://localhost:5000/api/projects/${projectId}/reject`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ applicantId })
+        });
+        if (response.ok) {
+            alert('ปฏิเสธคำขอเรียบร้อยแล้ว ❌');
+            loadApplicantsForDetail(projectId); // Reload applicant list
+        } else {
+            const data = await response.json();
+            alert(`ไม่สามารถทำรายการได้: ${data.error}`);
+        }
+    } catch (error) { alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์'); }
+}
+
+async function handleKick(projectId, memberName) {
+    if (!confirm(`คุณแน่ใจหรือไม่ที่จะเตะ "${memberName}" ออกจากทีม? 🥾`)) return;
+    const token = localStorage.getItem('token');
+    try {
+        const response = await fetch(`http://localhost:5000/api/projects/${projectId}/kick`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ memberName }) 
+        });
+        if (response.ok) {
+            alert(`เตะ ${memberName} ออกจากทีมเรียบร้อยแล้ว!`);
+            await fetchProjects();
+            openProjectDetailModal(projectId); // Reload modal
+        } else {
+            const data = await response.json();
+            alert(`เกิดข้อผิดพลาด: ${data.error}`);
+        }
+    } catch (error) {
+        // ✅ เพิ่มบล็อก catch ตรงนี้ เพื่อดักจับ Error และกันเว็บแครช
+        alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
+    }
+}
+
+// ==========================================
+// 15. ดึงข้อมูล "งานของฉัน" (My Tasks)
+// ==========================================
+async function fetchMyTasks() {
+    const pendingList = document.getElementById('pending-tasks-list');
+    const activeList = document.getElementById('active-tasks-list');
+    
+    pendingList.innerHTML = '<p>กำลังโหลด...</p>';
+    activeList.innerHTML = '<p>กำลังโหลด...</p>';
+
+    const token = localStorage.getItem('token');
+    try {
+        const response = await fetch('http://localhost:5000/api/projects/my-tasks', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            
+            // รอตอบรับ (Pending)
+            if (data.appliedProjects.length === 0) {
+                pendingList.innerHTML = '<p style="color: #7f8c8d;">ไม่มีงานที่รอตอบรับ</p>';
+            } else {
+                pendingList.innerHTML = '';
+                data.appliedProjects.forEach(project => {
+                    const card = createMiniProjectCard(project);
+                    
+                    const actionDiv = document.createElement('div');
+                    actionDiv.style.marginTop = '15px';
+                    actionDiv.style.textAlign = 'right';
+                    actionDiv.innerHTML = `<button onclick="cancelApplication('${project.id}')" class="btn-delete" style="float:none;">❌ ยกเลิกการสมัคร</button>`;
+                    
+                    card.appendChild(actionDiv);
+                    pendingList.appendChild(card);
+                });
+            }
+
+            // งานที่กำลังทำ (Active)
+            if (data.memberProjects.length === 0) {
+                activeList.innerHTML = '<p style="color: #7f8c8d;">ยังไม่มีงานที่กำลังทำ</p>';
+            } else {
+                activeList.innerHTML = '';
+                data.memberProjects.forEach(project => {
+                    const card = createMiniProjectCard(project);
+                    
+                    const actionDiv = document.createElement('div');
+                    actionDiv.style.marginTop = '15px';
+                    actionDiv.style.textAlign = 'right';
+                    actionDiv.innerHTML = `<button onclick="openProjectDetailModal('${project.id}')" class="btn-main" style="width:auto; padding:8px 15px; font-size:12px;">ดูรายละเอียด / พูดคุย</button>`;
+                    
+                    card.appendChild(actionDiv);
+                    activeList.appendChild(card);
+                });
+            }
+        }
+    } catch (error) {
+        pendingList.innerHTML = '<p style="color: red;">โหลดไม่สำเร็จ</p>';
+        activeList.innerHTML = '<p style="color: red;">โหลดไม่สำเร็จ</p>';
+    }
+}
+
+function createMiniProjectCard(project) {
+    const card = document.createElement('div');
+    card.className = 'project-card';
+    
+    let skillsHTML = '';
+    if (project.skills && project.skills.length > 0) {
+        skillsHTML = `<div style="margin-bottom: 10px;">` + 
+            project.skills.map(s => `<span class="skill-tag">${s.trim()}</span>`).join('') + 
+            `</div>`;
+    }
+
+    const currentMembersCount = (project.members && project.members[0] !== null) ? project.members.length : 0;
+    const maxMembersCount = project.maxMembers || 0;
+    const memberStatus = maxMembersCount > 0 ? `${currentMembersCount}/${maxMembersCount}` : `${currentMembersCount}`;
+    const isFull = project.status === 'Full';
+    
+    let statusBadge = isFull 
+        ? `<span style="color: white; background: #e74c3c; padding: 2px 8px; border-radius: 10px; font-size: 11px;">เต็มแล้ว</span>` 
+        : `<span style="color: white; background: #3498db; padding: 2px 8px; border-radius: 10px; font-size: 11px;">กำลังรับสมัคร</span>`;
+
+    card.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <h4>${project.title}</h4>
+            ${statusBadge}
+        </div>
+        <p style="margin-top: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${project.description}</p>
+        ${skillsHTML}
+        <div style="margin-top: 15px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #eee; padding-top: 10px;">
+            <span class="owner">👑 ${project.owner}</span>
+            <span style="font-size: 12px; color: #7f8c8d; font-weight: bold;">👥 ${memberStatus} คน</span>
+        </div>
+    `;
+    return card;
+}
+
+// ==========================================
+// 16. ยกเลิกการสมัคร (Cancel Application)
+// ==========================================
+async function cancelApplication(projectId) {
+    if (!confirm('แน่ใจหรือไม่ที่จะยกเลิกการสมัครโปรเจกต์นี้?')) return;
+    
+    const token = localStorage.getItem('token');
+    try {
+        const response = await fetch(`http://localhost:5000/api/projects/${projectId}/cancel-application`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (response.ok) {
+            alert('ยกเลิกการสมัครเรียบร้อยแล้ว');
+            fetchMyTasks(); // รีเฟรชหน้าต่างใหม่
+            fetchProjects(); // เผื่อมีการอัปเดตสถานะใน All Projects
+        } else {
+            const data = await response.json();
+            alert(`เกิดข้อผิดพลาด: ${data.error}`);
+        }
+    } catch (error) {
+        alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
+    }
+}
+
+// ==========================================
+// 17. โปรไฟล์ (Profile)
+// ==========================================
+async function fetchProfile() {
+    const token = localStorage.getItem('token');
+    try {
+        const response = await fetch('http://localhost:5000/api/auth/profile', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (response.ok) {
+            const profile = await response.json();
+            
+            document.getElementById('profile-name').value = profile.name;
+            document.getElementById('profile-email').value = profile.email;
+            document.getElementById('profile-contact').value = profile.contact || '';
+            
+            // 👇 แก้ไขตรงนี้: ดึงสกิลมาใส่กล่อง Tag
+            currentProfileSkills = profile.skills || [];
+            renderTags(currentProfileSkills, 'profile-tags-container', 'profile-skill-input', 'profile');
+            
+            const historyList = document.getElementById('profile-history-list');
+            if (profile.history && profile.history.length > 0) {
+                historyList.innerHTML = profile.history.map(h => `<li style="margin-bottom: 10px; padding: 10px; background: #f4f7f6; border-radius: 8px;">✅ ${h.title}</li>`).join('');
+            } else {
+                historyList.innerHTML = '<li style="color: #7f8c8d;">ยังไม่มีประวัติการทำงานเสร็จสิ้น</li>';
+            }
+        }
+    } catch (error) {
+        console.error('Fetch Profile Error:', error);
+    }
+}
+
+document.getElementById('profile-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const contact = document.getElementById('profile-contact').value;
+    
+    // 👇 แก้ไขตรงนี้: ดึงข้อมูลจากตัวแปร Tag แทนช่อง Input เดิม
+    const skills = currentProfileSkills; 
+    
+    const token = localStorage.getItem('token');
+    try {
+        const response = await fetch('http://localhost:5000/api/auth/profile', {
+            method: 'PUT',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ contact, skills })
+        });
+        
+        if (response.ok) {
+            alert('อัปเดตโปรไฟล์เรียบร้อยแล้ว!');
+            fetchProfile(); // โหลดใหม่เพื่อความชัวร์
+        } else {
+            const data = await response.json();
+            alert(`ไม่สามารถอัปเดตได้: ${data.error}`);
+        }
+    } catch (error) {
+        alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
+    }
+});
+
+// ==========================================
+// ระบบ Tag Manager สำหรับจัดการ Skills
+// ==========================================
+let currentProfileSkills = [];
+let currentProjectSkills = [];
+
+// ฟังก์ชันวาด Tag ลงในกล่อง
+function renderTags(tagsArray, containerId, inputId, arrayRefName) {
+    const container = document.getElementById(containerId);
+    // ลบ Tag เก่าออกให้หมดก่อนวาดใหม่ (ยกเว้นช่อง Input)
+    const tags = container.querySelectorAll('.skill-tag-item');
+    tags.forEach(t => t.remove());
+
+    // วาด Tag ใหม่แทรกไว้หน้าช่อง Input
+    const inputField = document.getElementById(inputId);
+    
+    tagsArray.forEach((skill, index) => {
+        const tagEl = document.createElement('div');
+        tagEl.className = 'skill-tag-item';
+        tagEl.innerHTML = `
+            ${skill} 
+            <span class="skill-tag-remove" onclick="removeTag('${arrayRefName}', ${index})">×</span>
+        `;
+        container.insertBefore(tagEl, inputField);
+    });
+}
+
+// ฟังก์ชันลบ Tag
+function removeTag(arrayRefName, index) {
+    if (arrayRefName === 'profile') {
+        currentProfileSkills.splice(index, 1);
+        renderTags(currentProfileSkills, 'profile-tags-container', 'profile-skill-input', 'profile');
+    } else if (arrayRefName === 'project') {
+        currentProjectSkills.splice(index, 1);
+        renderTags(currentProjectSkills, 'project-tags-container', 'project-skill-input', 'project');
+    }
+}
+
+// ดักจับเวลากด Enter ในช่อง Profile Skills
+const profileSkillInput = document.getElementById('profile-skill-input');
+if(profileSkillInput) {
+    profileSkillInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault(); // กันฟอร์ม submit
+            e.stopPropagation();
+            const val = this.value.trim();
+            if (val) {
+                // อนุญาตให้เพิ่มซ้ำได้ หรือถ้าซ้ำให้แจ้งเตือนและเคลียร์
+                if (!currentProfileSkills.includes(val)) {
+                    currentProfileSkills.push(val);
+                    renderTags(currentProfileSkills, 'profile-tags-container', 'profile-skill-input', 'profile');
+                }
+                this.value = ''; // เคลียร์ช่องพิมพ์เสมอ
+            }
+        }
+    });
+}
+
+// ดักจับเวลากด Enter ในช่อง Project Skills
+const projectSkillInput = document.getElementById('project-skill-input');
+if(projectSkillInput) {
+    projectSkillInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            e.stopPropagation();
+            const val = this.value.trim();
+            if (val) {
+                if (!currentProjectSkills.includes(val)) {
+                    currentProjectSkills.push(val);
+                    renderTags(currentProjectSkills, 'project-tags-container', 'project-skill-input', 'project');
+                }
+                this.value = '';
+            }
+        }
+    });
+}
+
+// ==========================================
+// Session Restore: ถ้ายังมี Token ใน LocalStorage ให้กลับเข้า Dashboard ทันที
+// ==========================================
+(function restoreSession() {
+    const token = localStorage.getItem('token');
+    if (token) {
+        document.getElementById('auth-section').style.display = 'none';
+        document.getElementById('dashboard-section').style.display = 'block';
+        switchTab('home');
+    }
+})();

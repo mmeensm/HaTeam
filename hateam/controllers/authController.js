@@ -46,3 +46,51 @@ exports.login = async (req, res) => {
     await session.close();
   }
 };
+
+exports.getProfile = async (req, res) => {
+  const userId = req.user.userId;
+  const session = driver.session();
+  try {
+    const query = `
+      MATCH (u:User {userId: $userId})
+      OPTIONAL MATCH (u)-[:MEMBER_OF]->(p:Project {status: 'Full'})
+      RETURN u.name AS name, u.email AS email, u.skills AS skills, u.contact AS contact,
+             collect({id: p.projectId, title: p.title}) AS history
+    `;
+    const result = await session.run(query, { userId });
+    if (result.records.length === 0) return res.status(404).json({ error: 'ไม่พบผู้ใช้' });
+
+    const record = result.records[0];
+    const profile = {
+      name: record.get('name'),
+      email: record.get('email'),
+      skills: record.get('skills') || [],
+      contact: record.get('contact') || '',
+      history: record.get('history').filter(h => h.id !== null)
+    };
+    res.json(profile);
+  } catch (error) {
+    res.status(500).json({ error: 'ดึงข้อมูลโปรไฟล์ไม่สำเร็จ' });
+  } finally {
+    await session.close();
+  }
+};
+
+exports.updateProfile = async (req, res) => {
+  const userId = req.user.userId;
+  const { skills, contact } = req.body;
+  const session = driver.session();
+  try {
+    const query = `
+      MATCH (u:User {userId: $userId})
+      SET u.skills = $skills, u.contact = $contact
+      RETURN u
+    `;
+    await session.run(query, { userId, skills: skills || [], contact: contact || '' });
+    res.json({ message: 'อัปเดตโปรไฟล์เรียบร้อยแล้ว' });
+  } catch (error) {
+    res.status(500).json({ error: 'อัปเดตโปรไฟล์ไม่สำเร็จ' });
+  } finally {
+    await session.close();
+  }
+};
